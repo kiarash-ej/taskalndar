@@ -19,12 +19,17 @@
 
 ## وضعیت پروژه
 
-- [x] پروژهٔ Supabase ساخته شد و جداول `tasks`، `task_completions`، `goals`، `goal_logs` طبق
-      [docs/spec.md](docs/spec.md) ایجاد شدند (مایگریشن در [`supabase/migrations`](supabase/migrations))
-- [ ] Row Level Security هنوز فعال نیست (تسک بعدی نفر اول)
-- [ ] کد فرانت‌اند و بک‌اند هنوز نوشته نشده
+نفر اول (بک‌اند و زیرساخت) کارهای خودش را کامل کرده، به‌جز دو مورد که به اسکلت Next.js نفر دوم وابسته‌اند:
 
-مراحل کار طبق [task-split-plan.md](docs/task-split-plan.md) پیش می‌رود.
+- [x] پروژهٔ Supabase + جداول (`tasks`، `task_completions`، `goals`، `goal_logs`) + Row Level Security
+- [x] احراز هویت ایمیل/رمز عبور (پیش‌فرض Supabase، تأیید شد)
+- [x] منطق تقویم جلالی و محاسبهٔ پیشرفت در [`packages/core`](packages/core) با ۱۷ تست واحد
+- [x] سرویس Railway ساخته و به ریپو وصل شد؛ متغیرهای Supabase تنظیم شدند
+- [ ] مسیرهای محافظت‌شده در Next.js — **منتظر** اسکلت Next.js نفر دوم
+- [ ] تست دپلوی موفق — **منتظر** وجود اپی برای build (فعلاً دپلوی خطای build می‌دهد چون هنوز کدی نیست)
+- [ ] کد فرانت‌اند (نفر دوم) هنوز نوشته نشده
+
+جزئیات کامل در [task-split-plan.md](docs/task-split-plan.md).
 
 ## Supabase
 
@@ -32,6 +37,16 @@
 - URL: `https://herhqlqicakwqoicgbtw.supabase.co`
 - مایگریشن‌ها در [`supabase/migrations`](supabase/migrations) نگهداری می‌شوند و با
   `mcp__Supabase__apply_migration` یا `supabase db push` روی پروژه اعمال می‌شوند.
+
+## منطق مشترک (`packages/core`)
+
+تبدیل تقویم جلالی، مرز هفته/ماه شمسی، و فرمول‌های پیشرفت طبق `docs/spec.md`:
+
+```bash
+cd packages/core
+npm install
+npm test
+```
 
 ## توسعه (پس از اسکلت‌بندی اولیه)
 
