@@ -19,8 +19,19 @@
 
 ## وضعیت پروژه
 
-این ریپو در مرحلهٔ راه‌اندازی است؛ کد فرانت‌اند و بک‌اند هنوز نوشته نشده. مراحل کار طبق
-[task-split-plan.md](docs/task-split-plan.md) پیش می‌رود.
+- [x] پروژهٔ Supabase ساخته شد و جداول `tasks`، `task_completions`، `goals`، `goal_logs` طبق
+      [docs/spec.md](docs/spec.md) ایجاد شدند (مایگریشن در [`supabase/migrations`](supabase/migrations))
+- [ ] Row Level Security هنوز فعال نیست (تسک بعدی نفر اول)
+- [ ] کد فرانت‌اند و بک‌اند هنوز نوشته نشده
+
+مراحل کار طبق [task-split-plan.md](docs/task-split-plan.md) پیش می‌رود.
+
+## Supabase
+
+- Project ref: `herhqlqicakwqoicgbtw`
+- URL: `https://herhqlqicakwqoicgbtw.supabase.co`
+- مایگریشن‌ها در [`supabase/migrations`](supabase/migrations) نگهداری می‌شوند و با
+  `mcp__Supabase__apply_migration` یا `supabase db push` روی پروژه اعمال می‌شوند.
 
 ## توسعه (پس از اسکلت‌بندی اولیه)
 
@@ -31,9 +42,4 @@ npm install
 npm run dev
 ```
 
-متغیرهای محیطی موردنیاز (در `.env.local`):
-
-```
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-```
+متغیرهای محیطی موردنیاز، نمونه در [`.env.example`](.env.example).
