@@ -67,14 +67,16 @@ export async function updateTask(
   return {};
 }
 
-// A recurring task that has already been running is archived rather than
-// deleted, so the days it was on the checklist keep their history; it stops
-// appearing from today on. Anything else is deleted outright.
+// A task that has already been on the checklist for at least one day (today
+// included) may already have a task_completions row, so it is archived
+// rather than deleted — recurring or not — to keep that history. A task
+// whose date hasn't arrived yet has nothing to preserve and is deleted
+// outright.
 export async function deleteTask(taskId: string): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: task } = await supabase
     .from("tasks")
-    .select("is_recurring, date, archived_at")
+    .select("date, archived_at")
     .eq("id", taskId)
     .single();
   if (!task) return { error: GENERIC_ERROR };
@@ -82,7 +84,7 @@ export async function deleteTask(taskId: string): Promise<{ error?: string }> {
   // one again from a past calendar day must not resurrect its later days.
   if (task.archived_at !== null) return {};
 
-  const keepHistory = task.is_recurring && task.date < todayIso();
+  const keepHistory = task.date <= todayIso();
   const { error } = keepHistory
     ? await supabase.from("tasks").update({ archived_at: new Date().toISOString() }).eq("id", taskId)
     : await supabase.from("tasks").delete().eq("id", taskId);

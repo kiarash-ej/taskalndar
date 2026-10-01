@@ -84,7 +84,9 @@ export function jalaliMonthOf(iso: IsoDate): JalaliMonth {
 
 export function shiftJalaliMonth({ jy, jm }: JalaliMonth, delta: number): JalaliMonth {
   const index = jy * 12 + (jm - 1) + delta;
-  return { jy: Math.floor(index / 12), jm: (index % 12) + 1 };
+  // Floor division + a positive-only modulo: JS's `%` keeps the sign of the
+  // dividend, so a negative `index` would otherwise yield a negative month.
+  return { jy: Math.floor(index / 12), jm: ((index % 12) + 12) % 12 + 1 };
 }
 
 export function jalaliMonthRange({ jy, jm }: JalaliMonth): { start: IsoDate; end: IsoDate } {
