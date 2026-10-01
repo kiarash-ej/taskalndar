@@ -1,5 +1,6 @@
 // Generated from the Supabase project (herhqlqicakwqoicgbtw) with
-// `supabase gen types typescript`. Regenerate after schema changes.
+// `supabase gen types typescript`, extended for the committed ownership/history
+// migrations. Regenerate against the project after applying those migrations.
 
 export type Json =
   | string
@@ -42,10 +43,10 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "goal_logs_goal_id_fkey"
-            columns: ["goal_id"]
+            columns: ["goal_id", "user_id"]
             isOneToOne: false
             referencedRelation: "goals"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "user_id"]
           },
         ]
       }
@@ -59,6 +60,7 @@ export type Database = {
           title: string
           unit: string
           user_id: string
+          start_date: string
         }
         Insert: {
           archived_at?: string | null
@@ -69,6 +71,7 @@ export type Database = {
           title: string
           unit: string
           user_id: string
+          start_date?: string
         }
         Update: {
           archived_at?: string | null
@@ -79,6 +82,7 @@ export type Database = {
           title?: string
           unit?: string
           user_id?: string
+          start_date?: string
         }
         Relationships: []
       }
@@ -107,10 +111,10 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "task_completions_task_id_fkey"
-            columns: ["task_id"]
+            columns: ["task_id", "user_id"]
             isOneToOne: false
             referencedRelation: "tasks"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "user_id"]
           },
         ]
       }
@@ -149,7 +153,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      update_task_schedule: {
+        Args: {
+          p_task_id: string
+          p_title: string
+          p_is_recurring: boolean
+          p_effective_date: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

@@ -29,7 +29,7 @@ export type TaskRow = Pick<Tables<"tasks">, "id" | "title" | "is_recurring" | "d
 export type CompletionRow = Pick<Tables<"task_completions">, "task_id" | "date" | "done">;
 export type GoalRow = Pick<
   Tables<"goals">,
-  "id" | "title" | "target_value" | "unit" | "created_at" | "archived_at"
+  "id" | "title" | "target_value" | "unit" | "start_date" | "created_at" | "archived_at"
 >;
 export type GoalLogRow = Pick<Tables<"goal_logs">, "id" | "goal_id" | "date" | "amount">;
 
@@ -108,9 +108,11 @@ export function scorePeriod(
 
   const goalPercents: number[] = [];
   for (const goal of data.goals) {
-    const from = calendarDateOf(goal.created_at);
+    const from = goal.start_date;
     const stop = stopDate(goal.archived_at);
-    const activeDays = days.filter((d) => d >= from && (stop === null || d < stop));
+    // Goal archival keeps the final day's work; tasks use an exclusive cutoff
+    // because replacing a task schedule must not count the effective day twice.
+    const activeDays = days.filter((d) => d >= from && (stop === null || d <= stop));
     if (activeDays.length === 0) continue;
 
     const target = activeDays.reduce((sum, d) => {
@@ -118,7 +120,8 @@ export function scorePeriod(
       return sum + goal.target_value / jalaaliMonthLength(jy, jm);
     }, 0);
     const amount = data.goalLogs
-      .filter((log) => log.goal_id === goal.id && log.date >= start && log.date <= last)
+      .filter((log) => log.goal_id === goal.id && log.date >= start && log.date <= last
+        && log.date >= from && (stop === null || log.date <= stop))
       .reduce((sum, log) => sum + log.amount, 0);
     goalPercents.push(goalProgressPercent(amount, target));
   }

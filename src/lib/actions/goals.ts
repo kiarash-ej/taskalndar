@@ -50,6 +50,17 @@ export async function logGoalProgress(
   }
 
   const supabase = await createClient();
+  const { data: goal, error: goalError } = await supabase
+    .from("goals")
+    .select("start_date, archived_at")
+    .eq("id", goalId)
+    .eq("user_id", user.id)
+    .single();
+  if (goalError || !goal) return { error: GENERIC_ERROR, values };
+  if (goal.archived_at !== null) return { error: "هدف بایگانی شده است.", values };
+  if (values.date < goal.start_date) {
+    return { error: "تاریخ ثبت پیشرفت نمی‌تواند قبل از شروع هدف باشد.", values };
+  }
   const { error } = await supabase
     .from("goal_logs")
     .insert({ goal_id: goalId, user_id: user.id, date: values.date, amount });
@@ -73,7 +84,8 @@ export async function archiveGoal(goalId: string): Promise<{ error?: string }> {
   const { error } = await supabase
     .from("goals")
     .update({ archived_at: new Date().toISOString() })
-    .eq("id", goalId);
+    .eq("id", goalId)
+    .is("archived_at", null);
   if (error) return { error: GENERIC_ERROR };
   refresh();
   return {};

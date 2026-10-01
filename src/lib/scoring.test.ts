@@ -25,6 +25,7 @@ const goal = (over: Partial<GoalRow>): GoalRow => ({
   target_value: 30,
   unit: "km",
   created_at: "2026-09-01T08:00:00Z",
+  start_date: "2026-09-01",
   archived_at: null,
   ...over,
 });
@@ -57,6 +58,47 @@ describe("isTaskActiveOn", () => {
 });
 
 describe("scorePeriod", () => {
+  it("preserves all progress when a goal is archived on its creation day", () => {
+    const data: ProgressData = {
+      ...empty,
+      goals: [goal({ start_date: "2026-10-01", created_at: "2026-10-01T08:00:00Z" })],
+      goalLogs: [{ id: "l", goal_id: "g", date: "2026-10-01", amount: 30 }],
+    };
+    const before = scorePeriod(data, "2026-09-23", "2026-10-22", "2026-10-01");
+    const after = scorePeriod({ ...data, goals: [
+      { ...data.goals[0], archived_at: "2026-10-01T12:00:00Z" },
+    ] }, "2026-09-23", "2026-10-22", "2026-10-01");
+    expect(after).toEqual(before);
+    expect(after.goalPercent).toBe(100);
+    expect(after.hasData).toBe(true);
+  });
+
+  it("includes the Tehran archive day but excludes later days and logs", () => {
+    const data: ProgressData = {
+      ...empty,
+      goals: [goal({ start_date: "2026-09-30", archived_at: "2026-09-30T21:00:00Z" })],
+      goalLogs: [
+        { id: "before", goal_id: "g", date: "2026-09-30", amount: 0.5 },
+        { id: "final", goal_id: "g", date: "2026-10-01", amount: 0.5 },
+        { id: "invalid", goal_id: "g", date: "2026-10-02", amount: 100 },
+      ],
+    };
+    expect(scorePeriod(data, "2026-09-30", "2026-10-02", "2026-10-02").goalPercent).toBe(50);
+    expect(scorePeriod(data, "2026-10-02", "2026-10-02", "2026-10-02").hasData).toBe(false);
+  });
+
+  it("scores existing backdated logs from the migrated goal start date", () => {
+    const data: ProgressData = {
+      ...empty,
+      goals: [goal({ start_date: "2026-09-21", created_at: "2026-10-01T08:00:00Z" })],
+      goalLogs: [{ id: "l", goal_id: "g", date: "2026-09-21", amount: 30 }],
+    };
+    const { previous, change } = compareWithPreviousMonth(data, "2026-10-01");
+    expect(previous.hasData).toBe(true);
+    expect(previous.goalPercent).toBe(100);
+    expect(change.kind).toBe("change");
+  });
+
   it("scores only the days up to today", () => {
     const data: ProgressData = {
       ...empty,
@@ -119,7 +161,7 @@ describe("scorePeriod", () => {
     const data: ProgressData = {
       ...empty,
       goals: [
-        goal({ id: "late", created_at: "2026-10-05T08:00:00Z" }),
+        goal({ id: "late", created_at: "2026-10-05T08:00:00Z", start_date: "2026-10-05" }),
         goal({ id: "gone", archived_at: "2026-09-20T08:00:00Z" }),
       ],
     };

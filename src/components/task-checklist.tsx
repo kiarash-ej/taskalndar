@@ -200,6 +200,7 @@ function TaskEditForm({ task, day, onClose }: { task: TaskRow; day: IsoDate; onC
         className={inputClass}
       />
       <KindPicker name={`edit-${task.id}`} defaultValue={kind} />
+      <p className="text-xs text-muted">تغییر نوع کار از امروز یا روز انتخاب‌شدهٔ آینده اعمال می‌شود؛ سابقهٔ روزهای گذشته حفظ می‌شود.</p>
       <div className="flex gap-2">
         <SubmitButton pendingText="در حال ذخیره…">ذخیره</SubmitButton>
         <button type="button" onClick={onClose} className={buttonClass.ghost}>

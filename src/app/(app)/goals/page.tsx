@@ -74,7 +74,7 @@ export default async function GoalsPage() {
                   </p>
                 </div>
                 <div className="space-y-3">
-                  <LogProgressForm goalId={goal.id} unit={goal.unit} today={today} />
+                  <LogProgressForm goalId={goal.id} unit={goal.unit} today={today} startDate={goal.start_date} />
                   <GoalLogList logs={logs} unit={goal.unit} />
                 </div>
               </Card>

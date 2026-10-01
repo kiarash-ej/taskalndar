@@ -27,7 +27,7 @@ export async function loadProgressData(
       .lte("date", to),
     supabase
       .from("goals")
-      .select("id, title, target_value, unit, created_at, archived_at")
+      .select("id, title, target_value, unit, start_date, created_at, archived_at")
       .eq("user_id", userId)
       .order("created_at"),
     supabase

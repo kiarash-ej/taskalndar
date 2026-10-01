@@ -49,27 +49,18 @@ export async function updateTask(
   const values = formValues(formData, ["title", "kind"]);
   const title = parseTitle(formData);
   const day = formData.get("day");
+  const user = await getCurrentUser();
+  if (!user) return { error: "ابتدا وارد حساب خود شوید.", values };
   if (!title) return { error: "عنوان کار را بنویسید (حداکثر ۲۰۰ نویسه).", values };
   if (!isIsoDate(day)) return { error: GENERIC_ERROR, values };
 
   const supabase = await createClient();
-  const { data: task } = await supabase
-    .from("tasks")
-    .select("is_recurring, date")
-    .eq("id", taskId)
-    .single();
-  if (!task) return { error: GENERIC_ERROR, values };
-
-  const isRecurring = parseRecurring(formData);
-  const { error } = await supabase
-    .from("tasks")
-    .update({
-      title,
-      is_recurring: isRecurring,
-      // a task turned into a one-time task stays on the day it was edited from
-      date: isRecurring ? task.date : day,
-    })
-    .eq("id", taskId);
+  const { error } = await supabase.rpc("update_task_schedule", {
+    p_task_id: taskId,
+    p_title: title,
+    p_is_recurring: parseRecurring(formData),
+    p_effective_date: day,
+  });
   if (error) return { error: GENERIC_ERROR, values };
 
   refresh();
@@ -83,10 +74,13 @@ export async function deleteTask(taskId: string): Promise<{ error?: string }> {
   const supabase = await createClient();
   const { data: task } = await supabase
     .from("tasks")
-    .select("is_recurring, date")
+    .select("is_recurring, date, archived_at")
     .eq("id", taskId)
     .single();
   if (!task) return { error: GENERIC_ERROR };
+  // Historical schedule versions must keep their original cutoff. Deleting
+  // one again from a past calendar day must not resurrect its later days.
+  if (task.archived_at !== null) return {};
 
   const keepHistory = task.is_recurring && task.date < todayIso();
   const { error } = keepHistory

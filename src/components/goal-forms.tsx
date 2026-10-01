@@ -59,22 +59,24 @@ export function NewGoalForm() {
 }
 
 // Today and the 30 days before it, labelled in the Jalali calendar.
-function recentDays(today: IsoDate): { value: IsoDate; label: string }[] {
+function recentDays(today: IsoDate, startDate: IsoDate): { value: IsoDate; label: string }[] {
   return Array.from({ length: 31 }, (_, i) => {
     const value = addDays(today, -i);
     const prefix = i === 0 ? "امروز — " : i === 1 ? "دیروز — " : "";
     return { value, label: prefix + formatLongDate(value) };
-  });
+  }).filter((day) => day.value >= startDate);
 }
 
 export function LogProgressForm({
   goalId,
   unit,
   today,
+  startDate,
 }: {
   goalId: string;
   unit: string;
   today: IsoDate;
+  startDate: IsoDate;
 }) {
   const [state, action] = useActionState(logGoalProgress.bind(null, goalId), initialFormState);
   return (
@@ -101,7 +103,7 @@ export function LogProgressForm({
           defaultValue={state.values?.date ?? today}
           className={cx(inputClass, "w-auto flex-1")}
         >
-          {recentDays(today).map((d) => (
+          {recentDays(today, startDate).map((d) => (
             <option key={d.value} value={d.value}>
               {d.label}
             </option>
