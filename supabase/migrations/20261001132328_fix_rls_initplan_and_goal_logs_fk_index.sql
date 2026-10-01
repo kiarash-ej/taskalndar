@@ -20,7 +20,8 @@ alter policy "goal_logs_owner_all" on public.goal_logs
   using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
 
--- unindexed_foreign_keys (lint 0001): goal_logs.goal_id references goals(id)
--- on delete cascade, so deleting a goal scans goal_logs without this index.
--- It also serves per-goal progress lookups.
+-- unindexed_foreign_keys (lint 0001): goal_logs' FK to goals is composite
+-- (goal_id, user_id), on delete cascade, but goal_id still leads it — an
+-- index on goal_id alone speeds both that cascade lookup and per-goal
+-- progress queries, without needing to repeat user_id.
 create index goal_logs_goal_idx on public.goal_logs (goal_id);
