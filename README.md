@@ -25,7 +25,7 @@
 - [x] سرویس Railway ساخته و به ریپو وصل شد؛ متغیرهای Supabase تنظیم شدند
 - [x] اپ Next.js (نفر دوم): ورود/ثبت‌نام، داشبورد، برنامهٔ روزانه با تقویم شمسی، هدف‌ها، آمار با نمودار
 - [x] مسیرهای محافظت‌شده در [`src/proxy.ts`](src/proxy.ts)
-- [ ] اعمال مایگریشن [`add_task_date`](supabase/migrations/20261001120000_add_task_date.sql) روی Supabase — **لازم** برای افزودن کار
+- [x] مایگریشن [`add_task_date`](supabase/migrations/20261001124442_add_task_date.sql) (ستون `tasks.date`) روی Supabase اعمال شد
 - [ ] تنظیم Site URL / Redirect URL در Supabase Auth برای دامنهٔ Railway، و تست دپلوی پس از merge به `main`
 
 جزئیات کامل در [task-split-plan.md](docs/task-split-plan.md).

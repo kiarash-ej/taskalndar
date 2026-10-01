@@ -1,6 +1,5 @@
 // Generated from the Supabase project (herhqlqicakwqoicgbtw) with
-// `supabase gen types typescript`, plus `tasks.date` from
-// supabase/migrations/20261001120000_add_task_date.sql. Regenerate after schema changes.
+// `supabase gen types typescript`. Regenerate after schema changes.
 
 export type Json =
   | string
