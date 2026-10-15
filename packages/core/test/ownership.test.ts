@@ -24,6 +24,7 @@ beforeAll(async () => {
     alter default privileges in schema public grant select, insert, update, delete on tables to authenticated;
     insert into auth.users values ('${owner}'), ('${other}');
   `);
+  await db.exec(readFileSync(fileURLToPath(new URL('../../../supabase/tests/storage-stub.sql', import.meta.url)), 'utf8'));
   const directory = fileURLToPath(new URL('../../../supabase/migrations/', import.meta.url));
   for (const file of readdirSync(directory).filter((f) => f.endsWith('.sql')).sort()) {
     await db.exec(readFileSync(directory + file, 'utf8'));
