@@ -3,7 +3,6 @@ import {
   endOfJalaaliWeek,
   goalProgressPercent,
   jalaaliMonthLength,
-  jalaaliWeekday,
   monthlyChangePercent,
   startOfJalaaliWeek,
   taskCompletionPercent,
@@ -19,6 +18,7 @@ import {
   jalaliMonthRange,
   jalaliOf,
   shiftJalaliMonth,
+  weekdayIndex,
   type IsoDate,
   type JalaliMonth,
 } from "./dates";
@@ -73,7 +73,7 @@ export function isTaskActiveOn(task: TaskRow, day: IsoDate): boolean {
   if (stop !== null && day >= stop) return false;
   if (!task.is_recurring) return task.date === day;
   if (task.date > day) return false;
-  return task.weekdays === null || task.weekdays.includes(jalaaliWeekday(isoToDate(day)));
+  return task.weekdays === null || task.weekdays.includes(weekdayIndex(day));
 }
 
 // The share of a goal's target that falls on one day: a weekly target spread
