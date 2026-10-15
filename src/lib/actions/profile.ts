@@ -25,7 +25,7 @@ export async function saveBackground(_prev: FormState, formData: FormData): Prom
   const { data: current } = await supabase
     .from("profiles")
     .select("background_kind, background_value")
-    .eq("user_id", user.id)
+    .eq("id", user.id)
     .maybeSingle();
 
   const kind = String(formData.get("kind") ?? "none");
@@ -62,13 +62,8 @@ export async function saveBackground(_prev: FormState, formData: FormData): Prom
   }
 
   const { error } = await supabase.from("profiles").upsert(
-    {
-      user_id: user.id,
-      background_kind: next.kind,
-      background_value: next.value,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id" },
+    { id: user.id, background_kind: next.kind, background_value: next.value },
+    { onConflict: "id" },
   );
   if (error) {
     // don't leave an orphaned upload behind

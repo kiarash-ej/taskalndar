@@ -5,6 +5,7 @@ import {
   startOfJalaaliMonth,
   endOfJalaaliMonth,
   previousJalaaliMonth,
+  jalaaliWeekday,
 } from '../src/week';
 import { toJalaali } from '../src/jalaali';
 
@@ -47,5 +48,19 @@ describe('jalaali month boundaries', () => {
       jy: 1404,
       jm: 12,
     });
+  });
+});
+
+describe('jalaaliWeekday', () => {
+  it('numbers the Iranian week from Saturday (0) to Friday (6)', () => {
+    // 2026-09-26 is a Saturday
+    const days = Array.from({ length: 7 }, (_, i) => jalaaliWeekday(new Date(Date.UTC(2026, 8, 26 + i))));
+    expect(days).toEqual([0, 1, 2, 3, 4, 5, 6]);
+  });
+
+  it('agrees with startOfJalaaliWeek', () => {
+    const day = new Date(Date.UTC(2026, 9, 15));
+    const start = startOfJalaaliWeek(day);
+    expect((day.getTime() - start.getTime()) / 86400000).toBe(jalaaliWeekday(day));
   });
 });

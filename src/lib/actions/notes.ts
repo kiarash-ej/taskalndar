@@ -17,10 +17,11 @@ export async function saveDailyNote(date: string, body: string): Promise<{ error
   const { error } = await supabase
     .from("daily_notes")
     .upsert(
-      { user_id: user.id, date, body, updated_at: new Date().toISOString() },
-      { onConflict: "user_id,date" },
+      { user_id: user.id, day: date, body },
+      { onConflict: "user_id,day" },
     );
   return error ? { error: GENERIC_ERROR } : {};
 }
 
-const MAX_NOTE_LENGTH = 20000;
+// daily_notes.body check constraint
+const MAX_NOTE_LENGTH = 10000;

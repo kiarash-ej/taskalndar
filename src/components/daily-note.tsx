@@ -9,7 +9,7 @@ type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
 
 const AUTOSAVE_DELAY_MS = 800;
 const RETRY_DELAY_MS = 3000;
-const MAX_NOTE_LENGTH = 20000;
+const MAX_NOTE_LENGTH = 10000;
 
 const STATUS_TEXT: Record<SaveState, string> = {
   idle: "",

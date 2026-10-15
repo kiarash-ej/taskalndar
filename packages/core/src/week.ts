@@ -2,11 +2,15 @@ import { toJalaali, toGregorian, jalaaliMonthLength } from './jalaali';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-// The Iranian week starts on Saturday. JS Date#getUTCDay() is 0=Sunday..6=Saturday,
-// so the offset back to the most recent Saturday is (day + 1) % 7.
+// Day of the Iranian week: 0 = Saturday .. 6 = Friday. JS Date#getUTCDay() is
+// 0=Sunday..6=Saturday, so this is also the offset back to the latest Saturday.
+// The database's public.jalali_weekday(date) uses the same numbering.
+export function jalaaliWeekday(date: Date): number {
+  return (date.getUTCDay() + 1) % 7;
+}
+
 export function startOfJalaaliWeek(date: Date): Date {
-  const offset = (date.getUTCDay() + 1) % 7;
-  return new Date(date.getTime() - offset * MS_PER_DAY);
+  return new Date(date.getTime() - jalaaliWeekday(date) * MS_PER_DAY);
 }
 
 export function endOfJalaaliWeek(date: Date): Date {

@@ -22,7 +22,7 @@ export const loadBackground = cache(async (userId: string): Promise<LoadedBackgr
   const { data } = await supabase
     .from("profiles")
     .select("background_kind, background_value")
-    .eq("user_id", userId)
+    .eq("id", userId)
     .maybeSingle();
   const background = data ? parseBackground(data.background_kind, data.background_value) : NO_BACKGROUND;
 
