@@ -4,9 +4,10 @@ import { ArchiveGoalButton, GoalLogList, LogProgressForm, NewGoalForm } from "@/
 import { Card, CardHeader, PageHeader, ProgressBar } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { loadProgressData } from "@/lib/data";
-import { jalaliMonthOf, todayIso } from "@/lib/dates";
+import { eachDay, jalaliMonthOf, todayIso } from "@/lib/dates";
 import { faNumber, formatDayMonth, formatMonthYear, formatPercent } from "@/lib/format";
 import { GOAL_PERIOD_TEXT, goalPeriodOf, goalPeriodWindow } from "@/lib/schedule";
+import { goalDailyTarget } from "@/lib/scoring";
 
 export const metadata: Metadata = { title: "هدف‌ها" };
 
@@ -48,7 +49,8 @@ export default async function GoalsPage() {
             );
             const amount = logs.reduce((sum, log) => sum + log.amount, 0);
             const percent = goalProgressPercent(amount, goal.target_value);
-            const expectedSoFar = (goal.target_value * range.dayOfPeriod) / range.length;
+            // the same per-day share of the target that scoring uses
+            const expectedSoFar = eachDay(range.start, today).reduce((sum, d) => sum + goalDailyTarget(goal, d), 0);
             const onTrack = amount >= expectedSoFar;
 
             return (

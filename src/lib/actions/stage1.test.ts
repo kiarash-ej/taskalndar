@@ -40,13 +40,13 @@ describe("saveDailyNote", () => {
   it("upserts one row per user and day", async () => {
     expect(await saveDailyNote("2026-10-10", "hello")).toEqual({});
     expect(mocks.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ user_id: "owner", date: "2026-10-10", body: "hello" }),
-      { onConflict: "user_id,date" },
+      { user_id: "owner", day: "2026-10-10", body: "hello" },
+      { onConflict: "user_id,day" },
     );
   });
 
   it("rejects signed-out users, bad dates and oversized notes", async () => {
-    expect((await saveDailyNote("2026-10-10", "x".repeat(20001))).error).toBeDefined();
+    expect((await saveDailyNote("2026-10-10", "x".repeat(10001))).error).toBeDefined();
     expect((await saveDailyNote("not-a-date", "x")).error).toBeDefined();
     mocks.user.mockResolvedValue(null);
     expect((await saveDailyNote("2026-10-10", "x")).error).toBeDefined();
@@ -58,8 +58,8 @@ describe("saveBackground", () => {
   it("saves a valid color and rejects a malformed one", async () => {
     expect((await saveBackground({}, form({ kind: "color", color: "#ABCDEF" }))).message).toBeDefined();
     expect(mocks.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ background_kind: "color", background_value: "#abcdef" }),
-      { onConflict: "user_id" },
+      { id: "owner", background_kind: "color", background_value: "#abcdef" },
+      { onConflict: "id" },
     );
     mocks.upsert.mockClear();
     expect((await saveBackground({}, form({ kind: "color", color: "red" }))).error).toBeDefined();

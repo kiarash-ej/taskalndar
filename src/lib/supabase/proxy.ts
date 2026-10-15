@@ -3,8 +3,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "../database.types";
 import { supabaseAnonKey, supabaseUrl } from "./env";
 
-// Pages anyone can open without signing in.
-const PUBLIC_PATHS = ["/login", "/signup", "/auth"];
+// Pages anyone can open without signing in. The bot webhook and the cron
+// endpoint have no user session; they check their own secrets.
+const PUBLIC_PATHS = ["/login", "/signup", "/auth", "/api/bot", "/api/cron"];
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));

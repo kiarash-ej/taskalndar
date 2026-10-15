@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   compareWithPreviousMonth,
+  goalDailyTarget,
   isTaskActiveOn,
   scorePeriod,
   scoringWindowStart,
@@ -14,8 +15,8 @@ const task = (over: Partial<TaskRow>): TaskRow => ({
   id: "t",
   title: "task",
   is_recurring: true,
-  weekdays: null,
   date: "2026-09-26",
+  weekdays: null,
   archived_at: null,
   ...over,
 });
@@ -56,6 +57,57 @@ describe("isTaskActiveOn", () => {
     const t = task({ archived_at: "2026-09-29T21:00:00Z" });
     expect(isTaskActiveOn(t, "2026-09-29")).toBe(true);
     expect(isTaskActiveOn(t, "2026-09-30")).toBe(false);
+  });
+});
+
+describe("weekly tasks", () => {
+  // WEEK runs Sat 2026-09-26 (weekday 0) .. Fri 2026-10-02 (weekday 6).
+  it("repeats only on the chosen weekdays from its date on", () => {
+    const t = task({ date: "2026-09-27", weekdays: [0, 2, 5] });
+    expect(isTaskActiveOn(t, "2026-09-26")).toBe(false); // Saturday, before its date
+    expect(isTaskActiveOn(t, "2026-09-27")).toBe(false); // Sunday
+    expect(isTaskActiveOn(t, "2026-09-28")).toBe(true); // Monday
+    expect(isTaskActiveOn(t, "2026-10-01")).toBe(true); // Thursday
+    expect(isTaskActiveOn(t, "2026-10-03")).toBe(true); // next Saturday
+  });
+
+  it("expects a weekly task only on its weekdays when scoring", () => {
+    const data: ProgressData = {
+      ...empty,
+      tasks: [task({ id: "w", weekdays: [0, 2] })],
+      completions: [{ task_id: "w", date: "2026-09-28", done: true }],
+    };
+    const score = scorePeriod(data, WEEK.start, WEEK.end, "2026-10-10");
+    expect(score.expectedTasks).toBe(2);
+    expect(score.doneTasks).toBe(1);
+    expect(score.taskPercent).toBe(50);
+  });
+});
+
+describe("weekly goals", () => {
+  it("gives a weekly goal its whole target over one Jalali week", () => {
+    const data: ProgressData = {
+      ...empty,
+      goals: [goal({ period: "weekly", target_value: 7 })],
+      goalLogs: [{ id: "l", goal_id: "g", date: "2026-09-28", amount: 3.5 }],
+    };
+    expect(scorePeriod(data, WEEK.start, WEEK.end, "2026-10-10").goalPercents).toEqual([50]);
+  });
+
+  it("prorates a weekly target by day over a month", () => {
+    // Mehr 1405 has 30 days: a 7-per-week goal targets 30 over the month.
+    const data: ProgressData = {
+      ...empty,
+      goals: [goal({ period: "weekly", target_value: 7 })],
+      goalLogs: [{ id: "l", goal_id: "g", date: "2026-09-28", amount: 15 }],
+    };
+    const [percent] = scorePeriod(data, "2026-09-23", "2026-10-22", "2026-11-01").goalPercents;
+    expect(percent).toBeCloseTo(50);
+  });
+
+  it("keeps monthly goals on their monthly target", () => {
+    expect(goalDailyTarget(goal({ target_value: 30 }), "2026-09-28")).toBe(1);
+    expect(goalDailyTarget(goal({ period: "weekly", target_value: 14 }), "2026-09-28")).toBe(2);
   });
 });
 

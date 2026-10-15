@@ -13,18 +13,8 @@ let today: string;
 
 beforeAll(async () => {
   db = new PGlite();
-  await db.exec(`
-    create schema auth;
-    create table auth.users (id uuid primary key);
-    create function auth.uid() returns uuid language sql stable as $$
-      select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
-    $$;
-    create role authenticated;
-    create role anon;
-    grant usage on schema public, auth to authenticated, anon;
-    alter default privileges in schema public grant select, insert, update, delete on tables to authenticated;
-    insert into auth.users values ('${owner}'), ('${other}');
-  `);
+  await db.exec(readFileSync(fileURLToPath(new URL('../../supabase/tests/supabase-stub.sql', import.meta.url)), 'utf8'));
+  await db.exec(`insert into auth.users values ('${owner}'), ('${other}');`);
   const directory = fileURLToPath(new URL('../../supabase/migrations/', import.meta.url));
   for (const file of readdirSync(directory).filter((f) => f.endsWith('.sql')).sort()) {
     await db.exec(readFileSync(directory + file, 'utf8'));
@@ -73,7 +63,7 @@ describe('history migrations', () => {
       [id, owner, addDays(today, -1), today]);
     const newId = await change(id, false);
     expect(newId).not.toBe(id);
-    const tasks = (await db.query<TaskRow>('select id, title, is_recurring, date::text, archived_at::text from public.tasks')).rows;
+    const tasks = (await db.query<TaskRow>('select id, title, is_recurring, date::text, weekdays, archived_at::text from public.tasks')).rows;
     const completions = (await db.query<ProgressData['completions'][number]>('select task_id, date::text, done from public.task_completions')).rows;
     const data = { tasks, completions, goals: [], goalLogs: [] };
     expect(scorePeriod(data, addDays(today, -1), addDays(today, -1), today).taskPercent).toBe(100);
