@@ -48,7 +48,7 @@ export function parseBackground(kind: string | null, value: string | null): Back
   return NO_BACKGROUND;
 }
 
-// `imageUrl` is the (signed) URL for an "image" background.
+// `imageUrl` is where an "image" background is served (backgroundImageUrl).
 export function backgroundStyle(bg: Background, imageUrl?: string | null): CSSProperties | null {
   if (bg.kind === "color" && bg.value) return { backgroundColor: bg.value };
   if (bg.kind === "gradient") {
