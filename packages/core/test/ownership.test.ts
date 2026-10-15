@@ -11,20 +11,8 @@ let db: PGlite;
 
 beforeAll(async () => {
   db = new PGlite();
-  await db.exec(`
-    create schema auth;
-    create table auth.users (id uuid primary key);
-    create function auth.uid() returns uuid language sql stable as $$
-      select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
-    $$;
-    create role authenticated;
-    create role anon;
-    grant usage on schema public, auth to authenticated;
-    grant execute on function auth.uid() to authenticated;
-    alter default privileges in schema public grant select, insert, update, delete on tables to authenticated;
-    insert into auth.users values ('${owner}'), ('${other}');
-  `);
-  await db.exec(readFileSync(fileURLToPath(new URL('../../../supabase/tests/storage-stub.sql', import.meta.url)), 'utf8'));
+  await db.exec(readFileSync(fileURLToPath(new URL('../../../supabase/tests/supabase-stub.sql', import.meta.url)), 'utf8'));
+  await db.exec(`insert into auth.users values ('${owner}'), ('${other}');`);
   const directory = fileURLToPath(new URL('../../../supabase/migrations/', import.meta.url));
   for (const file of readdirSync(directory).filter((f) => f.endsWith('.sql')).sort()) {
     await db.exec(readFileSync(directory + file, 'utf8'));

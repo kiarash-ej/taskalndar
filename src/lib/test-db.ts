@@ -12,19 +12,8 @@ const supabaseDir = fileURLToPath(new URL("../../supabase/", import.meta.url));
 
 export async function migratedDb(): Promise<PGlite> {
   const db = new PGlite();
-  await db.exec(`
-    create schema auth;
-    create table auth.users (id uuid primary key);
-    create function auth.uid() returns uuid language sql stable as $$
-      select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
-    $$;
-    create role authenticated;
-    create role anon;
-    grant usage on schema public, auth to authenticated, anon;
-    alter default privileges in schema public grant select, insert, update, delete on tables to authenticated, anon;
-    insert into auth.users values ('${OWNER}'), ('${OTHER}');
-  `);
-  await db.exec(readFileSync(supabaseDir + "tests/storage-stub.sql", "utf8"));
+  await db.exec(readFileSync(supabaseDir + "tests/supabase-stub.sql", "utf8"));
+  await db.exec(`insert into auth.users values ('${OWNER}'), ('${OTHER}');`);
   const migrations = supabaseDir + "migrations/";
   for (const file of readdirSync(migrations).filter((f) => f.endsWith(".sql")).sort()) {
     await db.exec(readFileSync(migrations + file, "utf8"));
@@ -32,10 +21,12 @@ export async function migratedDb(): Promise<PGlite> {
   return db;
 }
 
-// Runs `operation` as that user (null: an anonymous visitor) and rolls back.
+// Runs `operation` as that user (null: an anonymous visitor; "service_role":
+// the server's admin key) and rolls back.
 export async function asUser(db: PGlite, userId: string | null, operation: () => Promise<void>) {
-  const role = userId === null ? "anon" : "authenticated";
-  await db.exec(`begin; set local role ${role}; set local request.jwt.claim.sub = '${userId ?? ""}';`);
+  const role = userId === null ? "anon" : userId === "service_role" ? "service_role" : "authenticated";
+  const sub = role === "authenticated" ? userId : "";
+  await db.exec(`begin; set local role ${role}; set local request.jwt.claim.sub = '${sub}';`);
   try {
     await operation();
   } finally {
