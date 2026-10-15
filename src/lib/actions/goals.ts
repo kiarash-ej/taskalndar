@@ -5,6 +5,7 @@ import { getCurrentUser } from "../auth";
 import { isIsoDate, todayIso } from "../dates";
 import { formValues, GENERIC_ERROR, type FormState } from "../form-state";
 import { parseLocalizedNumber } from "../format";
+import { parseGoalPeriod } from "../schedule";
 import { createClient } from "../supabase/server";
 
 function parsePositive(value: FormDataEntryValue | null): number | null {
@@ -13,7 +14,7 @@ function parsePositive(value: FormDataEntryValue | null): number | null {
 }
 
 export async function createGoal(_prev: FormState, formData: FormData): Promise<FormState> {
-  const values = formValues(formData, ["title", "target_value", "unit"]);
+  const values = formValues(formData, ["title", "target_value", "unit", "period"]);
   const user = await getCurrentUser();
   if (!user) return { error: "ابتدا وارد حساب خود شوید.", values };
 
@@ -23,11 +24,13 @@ export async function createGoal(_prev: FormState, formData: FormData): Promise<
   if (!title || title.length > 200) return { error: "عنوان هدف را بنویسید.", values };
   if (target === null) return { error: "مقدار هدف باید عددی بزرگ‌تر از صفر باشد.", values };
   if (!unit || unit.length > 40) return { error: "واحد هدف را بنویسید (مثلاً کیلومتر).", values };
+  const period = parseGoalPeriod(values.period);
+  if (!period) return { error: "دورهٔ هدف را انتخاب کنید (هفتگی یا ماهانه).", values };
 
   const supabase = await createClient();
   const { error } = await supabase
     .from("goals")
-    .insert({ user_id: user.id, title, target_value: target, unit, period: "monthly" });
+    .insert({ user_id: user.id, title, target_value: target, unit, period });
   if (error) return { error: GENERIC_ERROR, values };
 
   refresh();

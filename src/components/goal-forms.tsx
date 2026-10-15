@@ -5,7 +5,13 @@ import { archiveGoal, createGoal, deleteGoalLog, logGoalProgress } from "@/lib/a
 import { addDays, type IsoDate } from "@/lib/dates";
 import { initialFormState } from "@/lib/form-state";
 import { faNumber, formatDayMonth, formatLongDate } from "@/lib/format";
+import { GOAL_PERIOD_TEXT, parseGoalPeriod, type GoalPeriod } from "@/lib/schedule";
 import type { GoalLogRow } from "@/lib/scoring";
+
+const GOAL_PERIOD_OPTIONS: { value: GoalPeriod; label: string }[] = [
+  { value: "weekly", label: "هفتگی" },
+  { value: "monthly", label: "ماهانه" },
+];
 import { Archive, Trash } from "./icons";
 import { SubmitButton } from "./submit-button";
 import { cx, Field, FormMessage, iconButtonClass, inputClass } from "./ui";
@@ -13,9 +19,29 @@ import { cx, Field, FormMessage, iconButtonClass, inputClass } from "./ui";
 export function NewGoalForm() {
   const [state, action] = useActionState(createGoal, initialFormState);
   const values = state.error ? state.values : undefined;
+  const [period, setPeriod] = useState<GoalPeriod>(parseGoalPeriod(values?.period) ?? "monthly");
   return (
     <form action={action} className="space-y-3">
       <FormMessage state={state} />
+      <fieldset className="grid grid-cols-2 gap-2">
+        <legend className="mb-1.5 text-sm font-medium">دورهٔ هدف</legend>
+        {GOAL_PERIOD_OPTIONS.map((option) => (
+          <label
+            key={option.value}
+            className="flex cursor-pointer items-center gap-2 rounded-xl border border-line p-2.5 text-sm has-[:checked]:border-accent has-[:checked]:bg-accent-soft"
+          >
+            <input
+              type="radio"
+              name="period"
+              value={option.value}
+              checked={period === option.value}
+              onChange={() => setPeriod(option.value)}
+              className="accent-accent"
+            />
+            <span className="font-medium">{option.label}</span>
+          </label>
+        ))}
+      </fieldset>
       <Field label="عنوان" htmlFor="goal-title">
         <input
           id="goal-title"
@@ -28,7 +54,7 @@ export function NewGoalForm() {
         />
       </Field>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="مقدار هدف در ماه" htmlFor="goal-target">
+        <Field label={`مقدار هدف ${GOAL_PERIOD_TEXT[period].per}`} htmlFor="goal-target">
           <input
             id="goal-target"
             name="target_value"
@@ -117,7 +143,15 @@ export function LogProgressForm({
   );
 }
 
-export function GoalLogList({ logs, unit }: { logs: GoalLogRow[]; unit: string }) {
+export function GoalLogList({
+  logs,
+  unit,
+  period,
+}: {
+  logs: GoalLogRow[];
+  unit: string;
+  period: GoalPeriod;
+}) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -125,7 +159,7 @@ export function GoalLogList({ logs, unit }: { logs: GoalLogRow[]; unit: string }
   return (
     <details className="group text-sm">
       <summary className="cursor-pointer select-none text-muted hover:text-fg">
-        ثبت‌های این ماه ({faNumber(logs.length)})
+        ثبت‌های {GOAL_PERIOD_TEXT[period].current} ({faNumber(logs.length)})
       </summary>
       {error && (
         <p role="alert" className="mt-2 text-down">

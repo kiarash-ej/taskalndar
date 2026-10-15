@@ -1,5 +1,6 @@
-// STAGE 1 (Person B): `daily_notes` and `profiles` below are the agreed contract,
-// written by hand until Person A's migrations land; then regenerate this file.
+// Written by hand until Person A's migrations land; then regenerate this file:
+// - STAGE 1 (Person B): the `daily_notes` and `profiles` tables
+// - STAGE 2 (Person B): `tasks.weekdays` and `update_task_schedule(p_weekdays)`
 //
 // Generated from the Supabase project (herhqlqicakwqoicgbtw) with
 // `supabase gen types typescript`, extended for the committed ownership/history
@@ -172,6 +173,7 @@ export type Database = {
           is_recurring: boolean
           title: string
           user_id: string
+          weekdays: number[] | null
         }
         Insert: {
           archived_at?: string | null
@@ -181,6 +183,7 @@ export type Database = {
           is_recurring?: boolean
           title: string
           user_id: string
+          weekdays?: number[] | null
         }
         Update: {
           archived_at?: string | null
@@ -190,6 +193,7 @@ export type Database = {
           is_recurring?: boolean
           title?: string
           user_id?: string
+          weekdays?: number[] | null
         }
         Relationships: []
       }
@@ -204,6 +208,7 @@ export type Database = {
           p_title: string
           p_is_recurring: boolean
           p_effective_date: string
+          p_weekdays?: number[] | null
         }
         Returns: string
       }

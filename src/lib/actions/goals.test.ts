@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../auth", () => ({ getCurrentUser: mocks.getCurrentUser }));
 vi.mock("../supabase/server", () => ({ createClient: mocks.createClient }));
 vi.mock("next/cache", () => ({ refresh: mocks.refresh }));
-import { logGoalProgress } from "./goals";
+import { createGoal, logGoalProgress } from "./goals";
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -55,6 +55,28 @@ describe("goal log dates", () => {
     expect((await logGoalProgress("goal", {}, form("2026-09-21"))).error).toBeTruthy();
     mocks.single.mockResolvedValue({ data: null, error: { message: "not found" } });
     expect((await logGoalProgress("goal", {}, form("2026-10-01"))).error).toBeTruthy();
+    expect(mocks.insert).not.toHaveBeenCalled();
+  });
+});
+
+describe("createGoal period", () => {
+  function goalForm(period?: string) {
+    const values = new FormData();
+    values.set("title", "run");
+    values.set("target_value", "۱۵");
+    values.set("unit", "km");
+    if (period !== undefined) values.set("period", period);
+    return values;
+  }
+
+  it("stores weekly and monthly goals", async () => {
+    expect(await createGoal({}, goalForm("weekly"))).toEqual({});
+    expect(mocks.insert).toHaveBeenCalledWith(expect.objectContaining({ period: "weekly", target_value: 15 }));
+  });
+
+  it("rejects a missing or unknown period", async () => {
+    expect((await createGoal({}, goalForm())).error).toBeTruthy();
+    expect((await createGoal({}, goalForm("daily"))).error).toBeTruthy();
     expect(mocks.insert).not.toHaveBeenCalled();
   });
 });

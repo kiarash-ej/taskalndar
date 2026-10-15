@@ -25,11 +25,14 @@ import {
 // Turns the user's rows into the inputs of packages/core's progress formulas
 // (spec.md "محاسبهٔ پیشرفت") for any range of days.
 
-export type TaskRow = Pick<Tables<"tasks">, "id" | "title" | "is_recurring" | "date" | "archived_at">;
+export type TaskRow = Pick<
+  Tables<"tasks">,
+  "id" | "title" | "is_recurring" | "weekdays" | "date" | "archived_at"
+>;
 export type CompletionRow = Pick<Tables<"task_completions">, "task_id" | "date" | "done">;
 export type GoalRow = Pick<
   Tables<"goals">,
-  "id" | "title" | "target_value" | "unit" | "start_date" | "created_at" | "archived_at"
+  "id" | "title" | "target_value" | "unit" | "period" | "start_date" | "created_at" | "archived_at"
 >;
 export type GoalLogRow = Pick<Tables<"goal_logs">, "id" | "goal_id" | "date" | "amount">;
 

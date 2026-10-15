@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 import { getCurrentUser } from "../auth";
 import { isIsoDate, todayIso } from "../dates";
 import { formValues, GENERIC_ERROR, type FormState } from "../form-state";
+import { parseSchedule, scheduleIncludes } from "../schedule";
 import { createClient } from "../supabase/server";
 
 const MAX_TITLE = 200;
@@ -13,10 +14,7 @@ function parseTitle(formData: FormData): string | null {
   return title.length > 0 && title.length <= MAX_TITLE ? title : null;
 }
 
-// "recurring" (every day from `date` on) or "once" (only on `date`)
-function parseRecurring(formData: FormData): boolean {
-  return formData.get("kind") !== "once";
-}
+const NO_WEEKDAYS_ERROR = "دست‌کم یک روز هفته را انتخاب کنید.";
 
 export async function createTask(_prev: FormState, formData: FormData): Promise<FormState> {
   const values = formValues(formData, ["title", "kind"]);
@@ -25,20 +23,29 @@ export async function createTask(_prev: FormState, formData: FormData): Promise<
 
   const title = parseTitle(formData);
   const date = formData.get("date");
+  const schedule = parseSchedule(formData);
   if (!title) return { error: "عنوان کار را بنویسید (حداکثر ۲۰۰ نویسه).", values };
   if (!isIsoDate(date)) return { error: GENERIC_ERROR, values };
+  if (!schedule) return { error: NO_WEEKDAYS_ERROR, values };
 
   const supabase = await createClient();
   const { error } = await supabase.from("tasks").insert({
     user_id: user.id,
     title,
-    is_recurring: parseRecurring(formData),
+    is_recurring: schedule.is_recurring,
+    weekdays: schedule.weekdays,
     date,
   });
   if (error) return { error: GENERIC_ERROR, values };
 
   refresh();
-  return { values: { kind: values.kind } };
+  return {
+    values: { kind: values.kind },
+    // the new task won't be on this day's checklist, so say where it went
+    message: scheduleIncludes(schedule, date)
+      ? undefined
+      : "کار ثبت شد و از این روز به بعد در روزهای انتخاب‌شده نمایش داده می‌شود.",
+  };
 }
 
 export async function updateTask(
@@ -51,14 +58,17 @@ export async function updateTask(
   const day = formData.get("day");
   const user = await getCurrentUser();
   if (!user) return { error: "ابتدا وارد حساب خود شوید.", values };
+  const schedule = parseSchedule(formData);
   if (!title) return { error: "عنوان کار را بنویسید (حداکثر ۲۰۰ نویسه).", values };
   if (!isIsoDate(day)) return { error: GENERIC_ERROR, values };
+  if (!schedule) return { error: NO_WEEKDAYS_ERROR, values };
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("update_task_schedule", {
     p_task_id: taskId,
     p_title: title,
-    p_is_recurring: parseRecurring(formData),
+    p_is_recurring: schedule.is_recurring,
+    p_weekdays: schedule.weekdays,
     p_effective_date: day,
   });
   if (error) return { error: GENERIC_ERROR, values };
