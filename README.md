@@ -42,10 +42,23 @@
 پیش از اجرای نسخهٔ جدید اپ باید اعمال شوند. اولی مالکیت کار/هدف مرجع را تضمین می‌کند؛
 دومی سابقهٔ تغییر نوع کار و تاریخ شروع هدف را نگه می‌دارد.
 
-مایگریشن‌های پلنر نسخهٔ ۲ (`20261015090000_profiles_and_daily_notes`،
-`20261015090100_backgrounds_storage`، `20261015090200_weekly_schedules`) هم فقط در ریپو هستند
-و هنوز روی پروژهٔ زنده اعمال نشده‌اند. قرارداد داده‌شان در
-[docs/planner-v2-contract.md](docs/planner-v2-contract.md) است.
+مایگریشن‌های پلنر نسخهٔ ۲ (همهٔ فایل‌های `20261015*`) هم فقط در ریپو هستند و هنوز روی
+پروژهٔ زنده اعمال نشده‌اند. قرارداد داده‌شان در [docs/planner-v2-contract.md](docs/planner-v2-contract.md) است.
+
+## خلاصهٔ روزانه در بله/تلگرام
+
+اختیاری است؛ بدون این متغیرها اپ عادی کار می‌کند. روی سرویس اپ در Railway تنظیم کنید:
+
+| متغیر | مقدار |
+| --- | --- |
+| `SUPABASE_SERVICE_ROLE_KEY` | کلید service role پروژهٔ Supabase (فقط سمت سرور) |
+| `BALE_BOT_TOKEN`، `TELEGRAM_BOT_TOKEN` | توکن بات هر پیام‌رسانی که می‌خواهید |
+| `BOT_WEBHOOK_SECRET`، `CRON_SECRET` | دو رشتهٔ تصادفی طولانی |
+
+1. webhook هر بات را ثبت کنید: `setWebhook` با آدرس
+   `https://<دامنهٔ اپ>/api/bot/bale?secret=<BOT_WEBHOOK_SECRET>` (برای تلگرام `.../api/bot/telegram`).
+2. در Railway یک سرویس cron از همین ریپو بسازید با زمان‌بندی `*/15 * * * *`، دستور شروع
+   `node scripts/trigger-daily-summary.mjs`، و متغیرهای `APP_URL` و `CRON_SECRET`.
 
 ## منطق مشترک (`packages/core`)
 
