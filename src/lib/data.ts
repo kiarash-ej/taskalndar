@@ -51,6 +51,21 @@ export async function loadProgressData(
   };
 }
 
+// The user's note for one day: "" when none was written yet, null when the
+// read failed. Callers must not autosave over a failed read, or the empty
+// editor would replace the stored note.
+export async function loadDailyNote(userId: string, day: IsoDate): Promise<string | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("daily_notes")
+    .select("body")
+    .eq("user_id", userId)
+    .eq("day", day)
+    .maybeSingle();
+  if (error) return null;
+  return data?.body ?? "";
+}
+
 // The user's time blocks on the days from..to (both inclusive), in time order:
 // the input of the monthly report (filterBlocks).
 export async function loadTimeBlocks(userId: string, from: IsoDate, to: IsoDate): Promise<BlockRow[]> {

@@ -9,6 +9,7 @@ const LINKS = [
   { href: "/planner", label: "برنامهٔ روزانه" },
   { href: "/goals", label: "هدف‌ها" },
   { href: "/stats", label: "آمار و پیشرفت" },
+  { href: "/settings", label: "تنظیمات" },
 ] as const;
 
 export function MainNav() {

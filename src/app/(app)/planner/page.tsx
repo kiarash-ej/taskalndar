@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "@/components/icons";
+import { DailyNote } from "@/components/daily-note";
 import { JalaliCalendar } from "@/components/jalali-calendar";
 import { NewTaskForm } from "@/components/new-task-form";
 import { TaskChecklist } from "@/components/task-checklist";
 import { Card, CardHeader, iconButtonClass, ProgressBar } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
-import { loadProgressData } from "@/lib/data";
+import { loadDailyNote, loadProgressData } from "@/lib/data";
 import { addDays, isIsoDate, todayIso } from "@/lib/dates";
 import { faDigits, formatLongDate, formatPercent } from "@/lib/format";
 import { scorePeriod, tasksForDay } from "@/lib/scoring";
@@ -19,7 +20,10 @@ export default async function PlannerPage({ searchParams }: PageProps<"/planner"
   const { date } = await searchParams;
   const day = isIsoDate(date) ? date : today;
 
-  const data = await loadProgressData(user.id, day, day);
+  const [data, noteBody] = await Promise.all([
+    loadProgressData(user.id, day, day),
+    loadDailyNote(user.id, day),
+  ]);
   const tasks = tasksForDay(data.tasks, day);
   const doneIds = data.completions.filter((c) => c.done && c.date === day).map((c) => c.task_id);
   const { expectedTasks, doneTasks, taskPercent } = scorePeriod(data, day, day, today);
@@ -85,6 +89,17 @@ export default async function PlannerPage({ searchParams }: PageProps<"/planner"
         <Card>
           <CardHeader title="افزودن کار" subtitle={`برای ${formatLongDate(day)}`} />
           <NewTaskForm day={day} />
+        </Card>
+
+        <Card>
+          <CardHeader title="یادداشت روزانه" subtitle={`برای ${formatLongDate(day)}`} />
+          {noteBody === null ? (
+            <p role="alert" className="rounded-xl bg-down-soft px-3 py-2 text-sm text-down">
+              یادداشت این روز بارگذاری نشد. صفحه را دوباره باز کنید.
+            </p>
+          ) : (
+            <DailyNote key={day} day={day} initialBody={noteBody} />
+          )}
         </Card>
       </div>
     </div>
