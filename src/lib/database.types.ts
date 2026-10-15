@@ -1,3 +1,6 @@
+// STAGE 1 (Person B): `daily_notes` and `profiles` below are the agreed contract,
+// written by hand until Person A's migrations land; then regenerate this file.
+//
 // Generated from the Supabase project (herhqlqicakwqoicgbtw) with
 // `supabase gen types typescript`, extended for the committed ownership/history
 // migrations. Regenerate against the project after applying those migrations.
@@ -18,6 +21,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      daily_notes: {
+        Row: {
+          body: string
+          date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body?: string
+          date: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       goal_logs: {
         Row: {
           amount: number
@@ -83,6 +107,27 @@ export type Database = {
           unit?: string
           user_id?: string
           start_date?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          background_kind: string
+          background_value: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          background_kind?: string
+          background_value?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          background_kind?: string
+          background_value?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }

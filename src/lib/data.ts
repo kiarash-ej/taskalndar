@@ -49,3 +49,15 @@ export async function loadProgressData(
     goalLogs: goalLogs.data ?? [],
   };
 }
+
+// The user's note for one day ("" when none was written yet, or on a failed read).
+export async function loadDailyNote(userId: string, day: IsoDate): Promise<string> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("daily_notes")
+    .select("body")
+    .eq("user_id", userId)
+    .eq("date", day)
+    .maybeSingle();
+  return data?.body ?? "";
+}
