@@ -1,18 +1,20 @@
 import { cache } from "react";
-import {
-  BACKGROUND_BUCKET,
-  NO_BACKGROUND,
-  parseBackground,
-  type Background,
-} from "./background";
+import { NO_BACKGROUND, parseBackground, type Background } from "./background";
 import { createClient } from "./supabase/server";
-
-const SIGNED_URL_SECONDS = 60 * 60;
 
 export interface LoadedBackground {
   background: Background;
-  // signed URL, only for an "image" background
+  // only for an "image" background: see backgroundImageUrl
   imageUrl: string | null;
+}
+
+// The app's own URL for a background image (src/app/background-image). Each
+// upload gets a new random path, so the URL is stable for as long as that
+// image is in use and the browser can cache it for good. A signed storage
+// URL would change on every render, and every server action re-renders the
+// layout, so each task tick would re-download the picture.
+export function backgroundImageUrl(path: string): string {
+  return `/background-image?v=${encodeURIComponent(path)}`;
 }
 
 // A missing profile row (or a failed query) just means "no custom background":
@@ -25,13 +27,6 @@ export const loadBackground = cache(async (userId: string): Promise<LoadedBackgr
     .eq("id", userId)
     .maybeSingle();
   const background = data ? parseBackground(data.background_kind, data.background_value) : NO_BACKGROUND;
-
-  let imageUrl: string | null = null;
-  if (background.kind === "image" && background.value) {
-    const { data: signed } = await supabase.storage
-      .from(BACKGROUND_BUCKET)
-      .createSignedUrl(background.value, SIGNED_URL_SECONDS);
-    imageUrl = signed?.signedUrl ?? null;
-  }
+  const imageUrl = background.kind === "image" && background.value ? backgroundImageUrl(background.value) : null;
   return { background, imageUrl };
 });
