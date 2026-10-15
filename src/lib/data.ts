@@ -1,3 +1,4 @@
+import type { Tables } from "./database.types";
 import type { IsoDate } from "./dates";
 import type { BlockRow } from "./report";
 import type { ProgressData } from "./scoring";
@@ -79,4 +80,43 @@ export async function loadTimeBlocks(userId: string, from: IsoDate, to: IsoDate)
     .order("start_at");
   if (error) throw new Error(error.message);
   return data;
+}
+
+export type TemplateBlockRow = Pick<
+  Tables<"day_template_blocks">,
+  "id" | "template_id" | "start_time" | "end_time" | "title" | "tags"
+>;
+
+export interface DayTemplate {
+  id: string;
+  name: string;
+  // by start time
+  blocks: TemplateBlockRow[];
+}
+
+// The user's day templates by name, each with its blocks.
+export async function loadTemplates(userId: string): Promise<DayTemplate[]> {
+  const supabase = await createClient();
+  const [templates, blocks] = await Promise.all([
+    supabase.from("day_templates").select("id, name").eq("user_id", userId).order("name"),
+    supabase
+      .from("day_template_blocks")
+      .select("id, template_id, start_time, end_time, title, tags")
+      .eq("user_id", userId)
+      .order("start_time"),
+  ]);
+  if (templates.error) throw new Error(templates.error.message);
+  if (blocks.error) throw new Error(blocks.error.message);
+  return templates.data.map((t) => ({
+    ...t,
+    blocks: blocks.data.filter((b) => b.template_id === t.id),
+  }));
+}
+
+// The user's tags, most used first, for autocomplete. Suggestions are a
+// convenience, so a failed read just means none.
+export async function loadUserTags(): Promise<string[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("user_tags");
+  return (data ?? []).map((row) => row.tag);
 }
