@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { createTask } from "@/lib/actions/tasks";
-import type { IsoDate } from "@/lib/dates";
+import { weekdayIndex, type IsoDate } from "@/lib/dates";
 import { initialFormState } from "@/lib/form-state";
 import { SubmitButton } from "./submit-button";
 import { KindPicker } from "./task-checklist";
@@ -28,7 +28,11 @@ export function NewTaskForm({ day }: { day: IsoDate }) {
           افزودن
         </SubmitButton>
       </div>
-      <KindPicker name="new-task" defaultValue={state.values?.kind ?? "recurring"} />
+      <KindPicker
+        name="new-task"
+        defaultValue={state.values?.kind ?? "recurring"}
+        defaultWeekdays={[weekdayIndex(day)]}
+      />
     </form>
   );
 }

@@ -2,15 +2,17 @@
 
 import { useActionState, useOptimistic, useState, useTransition, type ReactNode } from "react";
 import { deleteTask, setTaskDone, updateTask } from "@/lib/actions/tasks";
-import type { IsoDate } from "@/lib/dates";
+import { weekdayIndex, type IsoDate } from "@/lib/dates";
 import { initialFormState, type FormState } from "@/lib/form-state";
+import { WEEKDAY_INITIALS, WEEKDAY_NAMES } from "@/lib/format";
+import { ALL_WEEKDAYS, scheduleLabel, taskKindOf, type TaskKind } from "@/lib/schedule";
 import type { TaskRow } from "@/lib/scoring";
 import { Pencil, Trash } from "./icons";
 import { SubmitButton } from "./submit-button";
 import { buttonClass, cx, FormMessage, iconButtonClass, inputClass } from "./ui";
 
 // The checklist of one day's tasks. Ticking is optimistic; with `editable`
-// each row can also be renamed, switched between daily/one-time, or deleted.
+// each row can also be renamed, rescheduled (daily/weekdays/one-time), or deleted.
 export function TaskChecklist({
   day,
   today,
@@ -146,11 +148,12 @@ function TaskItem({
       </label>
       <span
         className={cx(
-          "shrink-0 rounded-full px-2 py-0.5 text-xs",
+          "max-w-40 shrink-0 truncate rounded-full px-2 py-0.5 text-xs",
           task.is_recurring ? "bg-accent-soft text-accent" : "bg-surface-2 text-muted",
         )}
+        title={scheduleLabel(task)}
       >
-        {task.is_recurring ? "هر روز" : "یک‌بار"}
+        {scheduleLabel(task)}
       </span>
       {editable && (
         <div className="flex shrink-0 items-center">
@@ -184,7 +187,8 @@ function TaskEditForm({ task, day, onClose }: { task: TaskRow; day: IsoDate; onC
     if (!result.error) onClose();
     return result;
   }, initialFormState);
-  const kind = state.values?.kind ?? (task.is_recurring ? "recurring" : "once");
+  const kind = state.values?.kind ?? taskKindOf(task);
+  const weekdays = task.weekdays?.length ? task.weekdays : [weekdayIndex(day)];
 
   return (
     <form action={action} className="space-y-3">
@@ -199,7 +203,7 @@ function TaskEditForm({ task, day, onClose }: { task: TaskRow; day: IsoDate; onC
         autoFocus
         className={inputClass}
       />
-      <KindPicker name={`edit-${task.id}`} defaultValue={kind} />
+      <KindPicker name={`edit-${task.id}`} defaultValue={kind} defaultWeekdays={weekdays} />
       <p className="text-xs text-muted">تغییر نوع کار از امروز یا روز انتخاب‌شدهٔ آینده اعمال می‌شود؛ سابقهٔ روزهای گذشته حفظ می‌شود.</p>
       <div className="flex gap-2">
         <SubmitButton pendingText="در حال ذخیره…">ذخیره</SubmitButton>
@@ -211,34 +215,80 @@ function TaskEditForm({ task, day, onClose }: { task: TaskRow; day: IsoDate; onC
   );
 }
 
-// Radio pair for tasks.is_recurring, submitted as kind=recurring|once.
-export function KindPicker({ name, defaultValue }: { name: string; defaultValue: string }) {
-  const options = [
-    { value: "recurring", label: "هر روز", hint: "از این روز به بعد تکرار می‌شود" },
-    { value: "once", label: "یک‌بار", hint: "فقط برای همین روز" },
-  ];
+const KIND_OPTIONS: { value: TaskKind; label: string; hint: string }[] = [
+  { value: "recurring", label: "هر روز", hint: "از این روز به بعد هر روز" },
+  { value: "weekdays", label: "روزهای هفته", hint: "فقط روزهای انتخاب‌شده" },
+  { value: "once", label: "یک‌بار", hint: "فقط برای همین روز" },
+];
+
+// How a task repeats, submitted as kind=recurring|weekdays|once plus one
+// `weekdays` value (0 = Saturday … 6 = Friday) per ticked day.
+export function KindPicker({
+  name,
+  defaultValue,
+  defaultWeekdays,
+}: {
+  name: string;
+  defaultValue: string;
+  // preselected days; defaults to the weekday of the day being planned
+  defaultWeekdays: number[];
+}) {
+  const [kind, setKind] = useState(defaultValue);
+  const [weekdays, setWeekdays] = useState(defaultWeekdays);
+
+  function toggleDay(day: number, on: boolean) {
+    setWeekdays((current) => (on ? [...current, day] : current.filter((d) => d !== day)));
+  }
+
   return (
-    <fieldset className="grid grid-cols-2 gap-2">
-      <legend className="sr-only">نوع کار</legend>
-      {options.map((option) => (
-        <label
-          key={option.value}
-          className="flex cursor-pointer items-start gap-2 rounded-xl border border-line p-2.5 text-sm has-[:checked]:border-accent has-[:checked]:bg-accent-soft"
-        >
-          <input
-            type="radio"
-            name="kind"
-            value={option.value}
-            defaultChecked={defaultValue === option.value}
-            className="mt-1 accent-accent"
-            id={`${name}-${option.value}`}
-          />
-          <span>
-            <span className="block font-medium">{option.label}</span>
-            <span className="block text-xs text-muted">{option.hint}</span>
-          </span>
-        </label>
-      ))}
-    </fieldset>
+    <div className="space-y-2">
+      <fieldset className="grid grid-cols-3 gap-2">
+        <legend className="sr-only">نوع کار</legend>
+        {KIND_OPTIONS.map((option) => (
+          <label
+            key={option.value}
+            className="flex cursor-pointer items-start gap-2 rounded-xl border border-line p-2.5 text-sm has-[:checked]:border-accent has-[:checked]:bg-accent-soft"
+          >
+            <input
+              type="radio"
+              name="kind"
+              value={option.value}
+              checked={kind === option.value}
+              onChange={() => setKind(option.value)}
+              className="mt-1 accent-accent"
+              id={`${name}-${option.value}`}
+            />
+            <span>
+              <span className="block font-medium">{option.label}</span>
+              <span className="block text-xs text-muted">{option.hint}</span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+
+      {kind === "weekdays" && (
+        <fieldset className="flex flex-wrap gap-1.5">
+          <legend className="mb-1.5 text-xs text-muted">در این روزها تکرار شود:</legend>
+          {ALL_WEEKDAYS.map((day) => (
+            <label
+              key={day}
+              title={WEEKDAY_NAMES[day]}
+              className="flex size-10 cursor-pointer items-center justify-center rounded-xl border border-line text-sm font-semibold text-muted transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent has-[:checked]:text-accent-fg has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent/40"
+            >
+              <input
+                type="checkbox"
+                name="weekdays"
+                value={day}
+                checked={weekdays.includes(day)}
+                onChange={(e) => toggleDay(day, e.target.checked)}
+                aria-label={WEEKDAY_NAMES[day]}
+                className="sr-only"
+              />
+              {WEEKDAY_INITIALS[day]}
+            </label>
+          ))}
+        </fieldset>
+      )}
+    </div>
   );
 }
