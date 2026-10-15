@@ -1,5 +1,6 @@
 import {
   jalaaliMonthLength,
+  jalaaliWeekday,
   toGregorian,
   toJalaali,
   type JalaaliDate,
@@ -98,5 +99,5 @@ export function jalaliMonthRange({ jy, jm }: JalaliMonth): { start: IsoDate; end
 
 // Position in the Iranian week: 0 = Saturday ... 6 = Friday.
 export function weekdayIndex(iso: IsoDate): number {
-  return (isoToDate(iso).getUTCDay() + 1) % 7;
+  return jalaaliWeekday(isoToDate(iso));
 }

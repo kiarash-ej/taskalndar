@@ -1,4 +1,5 @@
 import type { IsoDate } from "./dates";
+import type { BlockRow } from "./report";
 import type { ProgressData } from "./scoring";
 import { createClient } from "./supabase/server";
 
@@ -16,7 +17,7 @@ export async function loadProgressData(
   const [tasks, completions, goals, goalLogs] = await Promise.all([
     supabase
       .from("tasks")
-      .select("id, title, is_recurring, date, archived_at")
+      .select("id, title, is_recurring, date, weekdays, archived_at")
       .eq("user_id", userId)
       .order("created_at"),
     supabase
@@ -27,7 +28,7 @@ export async function loadProgressData(
       .lte("date", to),
     supabase
       .from("goals")
-      .select("id, title, target_value, unit, start_date, created_at, archived_at")
+      .select("id, title, target_value, unit, period, start_date, created_at, archived_at")
       .eq("user_id", userId)
       .order("created_at"),
     supabase
@@ -48,4 +49,19 @@ export async function loadProgressData(
     goals: goals.data ?? [],
     goalLogs: goalLogs.data ?? [],
   };
+}
+
+// The user's time blocks on the days from..to (both inclusive), in time order:
+// the input of the monthly report (filterBlocks).
+export async function loadTimeBlocks(userId: string, from: IsoDate, to: IsoDate): Promise<BlockRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("time_blocks")
+    .select("id, day, start_at, end_at, title, description, tags, amount, unit, cost, done")
+    .eq("user_id", userId)
+    .gte("day", from)
+    .lte("day", to)
+    .order("start_at");
+  if (error) throw new Error(error.message);
+  return data;
 }
