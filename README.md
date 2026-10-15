@@ -53,6 +53,7 @@
 | --- | --- |
 | `SUPABASE_SERVICE_ROLE_KEY` | کلید service role پروژهٔ Supabase (فقط سمت سرور) |
 | `BALE_BOT_TOKEN`، `TELEGRAM_BOT_TOKEN` | توکن بات هر پیام‌رسانی که می‌خواهید |
+| `BALE_BOT_USERNAME`، `TELEGRAM_BOT_USERNAME` | نام کاربری بات (بدون @)؛ در صفحهٔ تنظیمات نمایش داده می‌شود و پیوند تلگرام با آن ساخته می‌شود |
 | `BOT_WEBHOOK_SECRET`، `CRON_SECRET` | دو رشتهٔ تصادفی طولانی |
 
 1. webhook هر بات را ثبت کنید: `setWebhook` با آدرس
