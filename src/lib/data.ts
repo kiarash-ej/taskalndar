@@ -16,7 +16,7 @@ export async function loadProgressData(
   const [tasks, completions, goals, goalLogs] = await Promise.all([
     supabase
       .from("tasks")
-      .select("id, title, is_recurring, date, archived_at")
+      .select("id, title, is_recurring, date, weekdays, archived_at")
       .eq("user_id", userId)
       .order("created_at"),
     supabase
@@ -27,7 +27,7 @@ export async function loadProgressData(
       .lte("date", to),
     supabase
       .from("goals")
-      .select("id, title, target_value, unit, start_date, created_at, archived_at")
+      .select("id, title, target_value, unit, period, start_date, created_at, archived_at")
       .eq("user_id", userId)
       .order("created_at"),
     supabase

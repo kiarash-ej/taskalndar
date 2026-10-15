@@ -3,6 +3,7 @@ import {
   endOfJalaaliWeek,
   goalProgressPercent,
   jalaaliMonthLength,
+  jalaaliWeekday,
   monthlyChangePercent,
   startOfJalaaliWeek,
   taskCompletionPercent,
@@ -25,11 +26,14 @@ import {
 // Turns the user's rows into the inputs of packages/core's progress formulas
 // (spec.md "محاسبهٔ پیشرفت") for any range of days.
 
-export type TaskRow = Pick<Tables<"tasks">, "id" | "title" | "is_recurring" | "date" | "archived_at">;
+export type TaskRow = Pick<
+  Tables<"tasks">,
+  "id" | "title" | "is_recurring" | "date" | "weekdays" | "archived_at"
+>;
 export type CompletionRow = Pick<Tables<"task_completions">, "task_id" | "date" | "done">;
 export type GoalRow = Pick<
   Tables<"goals">,
-  "id" | "title" | "target_value" | "unit" | "start_date" | "created_at" | "archived_at"
+  "id" | "title" | "target_value" | "unit" | "period" | "start_date" | "created_at" | "archived_at"
 >;
 export type GoalLogRow = Pick<Tables<"goal_logs">, "id" | "goal_id" | "date" | "amount">;
 
@@ -61,12 +65,23 @@ function stopDate(archivedAt: string | null): IsoDate | null {
   return archivedAt === null ? null : calendarDateOf(archivedAt);
 }
 
-// A recurring task repeats every day from `date` on; a one-time task is only
-// expected on `date`. Either stops applying from the day it was archived.
+// A recurring task repeats from `date` on, every day or (with `weekdays`,
+// 0 = Saturday .. 6 = Friday) only on those days of the week; a one-time task
+// is only expected on `date`. Either stops applying from the day it was archived.
 export function isTaskActiveOn(task: TaskRow, day: IsoDate): boolean {
   const stop = stopDate(task.archived_at);
   if (stop !== null && day >= stop) return false;
-  return task.is_recurring ? task.date <= day : task.date === day;
+  if (!task.is_recurring) return task.date === day;
+  if (task.date > day) return false;
+  return task.weekdays === null || task.weekdays.includes(jalaaliWeekday(isoToDate(day)));
+}
+
+// The share of a goal's target that falls on one day: a weekly target spread
+// over the 7 days of a Jalali week, a monthly one over the days of its month.
+export function goalDailyTarget(goal: GoalRow, day: IsoDate): number {
+  if (goal.period === "weekly") return goal.target_value / 7;
+  const { jy, jm } = jalaliOf(day);
+  return goal.target_value / jalaaliMonthLength(jy, jm);
 }
 
 export function tasksForDay(tasks: TaskRow[], day: IsoDate): TaskRow[] {
@@ -80,10 +95,10 @@ function average(values: number[]): number {
 // Scores [start, end]. Days after `today` are not expected yet, so a period in
 // progress is scored on its days so far rather than counted as missed.
 //
-// Goals have a monthly target (spec v1), so for a range that isn't a whole
-// month the target is prorated per day: each active day contributes
-// target / (length of its Jalali month). Over a full month that sums to the
-// target itself, and a week gets roughly a quarter of it.
+// Goals have a monthly or weekly target, prorated per day (goalDailyTarget)
+// for ranges that aren't a whole period: over a full Jalali month (or week)
+// the days sum to the target itself, and a week of a monthly goal gets
+// roughly a quarter of it.
 export function scorePeriod(
   data: ProgressData,
   start: IsoDate,
@@ -115,10 +130,7 @@ export function scorePeriod(
     const activeDays = days.filter((d) => d >= from && (stop === null || d <= stop));
     if (activeDays.length === 0) continue;
 
-    const target = activeDays.reduce((sum, d) => {
-      const { jy, jm } = jalaliOf(d);
-      return sum + goal.target_value / jalaaliMonthLength(jy, jm);
-    }, 0);
+    const target = activeDays.reduce((sum, d) => sum + goalDailyTarget(goal, d), 0);
     const amount = data.goalLogs
       .filter((log) => log.goal_id === goal.id && log.date >= start && log.date <= last
         && log.date >= from && (stop === null || log.date <= stop))

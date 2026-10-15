@@ -1,6 +1,7 @@
 // Generated from the Supabase project (herhqlqicakwqoicgbtw) with
-// `supabase gen types typescript`, extended for the committed ownership/history
-// migrations. Regenerate against the project after applying those migrations.
+// `supabase gen types typescript`, extended by hand for the committed
+// ownership/history, profiles/daily_notes and weekly-schedule migrations.
+// Regenerate against the project after applying those migrations.
 
 export type Json =
   | string
@@ -18,6 +19,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      daily_notes: {
+        Row: {
+          body: string
+          created_at: string
+          day: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          day: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          day?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       goal_logs: {
         Row: {
           amount: number
@@ -86,6 +114,30 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          background_kind: string
+          background_value: string | null
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          background_kind?: string
+          background_value?: string | null
+          created_at?: string
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          background_kind?: string
+          background_value?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       task_completions: {
         Row: {
           date: string
@@ -127,6 +179,7 @@ export type Database = {
           is_recurring: boolean
           title: string
           user_id: string
+          weekdays: number[] | null
         }
         Insert: {
           archived_at?: string | null
@@ -136,6 +189,7 @@ export type Database = {
           is_recurring?: boolean
           title: string
           user_id: string
+          weekdays?: number[] | null
         }
         Update: {
           archived_at?: string | null
@@ -145,6 +199,7 @@ export type Database = {
           is_recurring?: boolean
           title?: string
           user_id?: string
+          weekdays?: number[] | null
         }
         Relationships: []
       }
@@ -153,14 +208,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      jalali_weekday: {
+        Args: { d: string }
+        Returns: number
+      }
       update_task_schedule: {
         Args: {
           p_task_id: string
           p_title: string
           p_is_recurring: boolean
           p_effective_date: string
+          p_weekdays?: number[] | null
         }
         Returns: string
+      }
+      weekdays_are_canonical: {
+        Args: { w: number[] }
+        Returns: boolean
       }
     }
     Enums: {
