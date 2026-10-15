@@ -50,14 +50,17 @@ export async function loadProgressData(
   };
 }
 
-// The user's note for one day ("" when none was written yet, or on a failed read).
-export async function loadDailyNote(userId: string, day: IsoDate): Promise<string> {
+// The user's note for one day: "" when none was written yet, null when the
+// read failed. Callers must not autosave over a failed read, or the empty
+// editor would replace the stored note.
+export async function loadDailyNote(userId: string, day: IsoDate): Promise<string | null> {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("daily_notes")
     .select("body")
     .eq("user_id", userId)
     .eq("date", day)
     .maybeSingle();
+  if (error) return null;
   return data?.body ?? "";
 }

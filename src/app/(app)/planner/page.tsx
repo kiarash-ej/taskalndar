@@ -93,7 +93,13 @@ export default async function PlannerPage({ searchParams }: PageProps<"/planner"
 
         <Card>
           <CardHeader title="یادداشت روزانه" subtitle={`برای ${formatLongDate(day)}`} />
-          <DailyNote key={day} day={day} initialBody={noteBody} />
+          {noteBody === null ? (
+            <p role="alert" className="rounded-xl bg-down-soft px-3 py-2 text-sm text-down">
+              یادداشت این روز بارگذاری نشد. صفحه را دوباره باز کنید.
+            </p>
+          ) : (
+            <DailyNote key={day} day={day} initialBody={noteBody} />
+          )}
         </Card>
       </div>
     </div>

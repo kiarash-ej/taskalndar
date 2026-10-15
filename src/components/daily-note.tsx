@@ -28,9 +28,10 @@ export function DailyNote({ day, initialBody }: { day: IsoDate; initialBody: str
   const lastSaved = useRef(initialBody);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saving = useRef(false);
+  const mounted = useRef(true);
 
   async function flush() {
-    if (saving.current) return;
+    if (saving.current || !mounted.current) return;
     saving.current = true;
     try {
       // loop so edits made while a save was in flight are saved too
@@ -40,7 +41,8 @@ export function DailyNote({ day, initialBody }: { day: IsoDate; initialBody: str
         const { error } = await saveDailyNote(day, text);
         if (error) {
           setStatus("error");
-          timer.current = setTimeout(flush, RETRY_DELAY_MS);
+          // the unmount cleanup has already run; don't re-arm behind its back
+          if (mounted.current) timer.current = setTimeout(flush, RETRY_DELAY_MS);
           return;
         }
         lastSaved.current = text;
@@ -61,7 +63,9 @@ export function DailyNote({ day, initialBody }: { day: IsoDate; initialBody: str
 
   // Save pending text when leaving the page or switching days.
   useEffect(() => {
+    mounted.current = true;
     return () => {
+      mounted.current = false;
       if (timer.current) clearTimeout(timer.current);
       if (latest.current !== lastSaved.current) void saveDailyNote(day, latest.current);
     };
