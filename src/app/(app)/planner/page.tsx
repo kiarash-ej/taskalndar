@@ -5,9 +5,10 @@ import { DailyNote } from "@/components/daily-note";
 import { JalaliCalendar } from "@/components/jalali-calendar";
 import { NewTaskForm } from "@/components/new-task-form";
 import { TaskChecklist } from "@/components/task-checklist";
+import { DayBlocks } from "@/components/time-blocks";
 import { Card, CardHeader, iconButtonClass, ProgressBar } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
-import { loadDailyNote, loadProgressData } from "@/lib/data";
+import { loadDailyNote, loadProgressData, loadTemplates, loadTimeBlocks, loadUserTags } from "@/lib/data";
 import { addDays, isIsoDate, todayIso } from "@/lib/dates";
 import { faDigits, formatLongDate, formatPercent } from "@/lib/format";
 import { scorePeriod, tasksForDay } from "@/lib/scoring";
@@ -20,9 +21,12 @@ export default async function PlannerPage({ searchParams }: PageProps<"/planner"
   const { date } = await searchParams;
   const day = isIsoDate(date) ? date : today;
 
-  const [data, noteBody] = await Promise.all([
+  const [data, noteBody, blocks, templates, tagSuggestions] = await Promise.all([
     loadProgressData(user.id, day, day),
     loadDailyNote(user.id, day),
+    loadTimeBlocks(user.id, day, day),
+    loadTemplates(user.id),
+    loadUserTags(),
   ]);
   const tasks = tasksForDay(data.tasks, day);
   const doneIds = data.completions.filter((c) => c.done && c.date === day).map((c) => c.task_id);
@@ -89,6 +93,17 @@ export default async function PlannerPage({ searchParams }: PageProps<"/planner"
         <Card>
           <CardHeader title="افزودن کار" subtitle={`برای ${formatLongDate(day)}`} />
           <NewTaskForm day={day} />
+        </Card>
+
+        <Card>
+          <CardHeader title="برنامهٔ زمانی" subtitle="بازه‌های روز با توضیحات، برچسب، مقدار و هزینه" />
+          <DayBlocks
+            key={day}
+            day={day}
+            blocks={blocks}
+            suggestions={tagSuggestions}
+            templates={templates.map((t) => ({ id: t.id, name: t.name, blockCount: t.blocks.length }))}
+          />
         </Card>
 
         <Card>
