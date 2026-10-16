@@ -31,7 +31,7 @@ describe("task schedule actions", () => {
     form.set("day", "2026-10-01");
     expect(await updateTask("task", {}, form)).toEqual({});
     expect(mocks.rpc).toHaveBeenCalledWith("update_task_schedule", {
-      p_task_id: "task", p_title: "updated", p_is_recurring: false, p_weekdays: null, p_effective_date: "2026-10-01",
+      p_task_id: "task", p_title: "updated", p_is_recurring: false, p_weekdays: undefined, p_effective_date: "2026-10-01",
     });
   });
 

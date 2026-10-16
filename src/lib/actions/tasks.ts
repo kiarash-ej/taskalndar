@@ -68,7 +68,8 @@ export async function updateTask(
     p_task_id: taskId,
     p_title: title,
     p_is_recurring: schedule.is_recurring,
-    p_weekdays: schedule.weekdays,
+    // omitted (not null) for every day / one-time: the argument defaults to null
+    p_weekdays: schedule.weekdays ?? undefined,
     p_effective_date: day,
   });
   if (error) return { error: GENERIC_ERROR, values };

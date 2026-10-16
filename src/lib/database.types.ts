@@ -1,7 +1,6 @@
 // Generated from the Supabase project (herhqlqicakwqoicgbtw) with
-// `supabase gen types typescript`, extended by hand for the committed
-// ownership/history migrations and the planner v2 migrations (20261015*).
-// Regenerate against the project after applying those migrations.
+// `supabase gen types typescript` after applying every migration in
+// supabase/migrations (2026-10-16). Regenerate after each new migration.
 
 export type Json =
   | string
@@ -19,6 +18,18 @@ export type Database = {
   }
   public: {
     Tables: {
+      _write_probe: {
+        Row: {
+          id: number | null
+        }
+        Insert: {
+          id?: number | null
+        }
+        Update: {
+          id?: number | null
+        }
+        Relationships: []
+      }
       daily_notes: {
         Row: {
           body: string
@@ -146,33 +157,33 @@ export type Database = {
           created_at: string
           id: string
           period: string
+          start_date: string
           target_value: number
           title: string
           unit: string
           user_id: string
-          start_date: string
         }
         Insert: {
           archived_at?: string | null
           created_at?: string
           id?: string
           period?: string
+          start_date?: string
           target_value: number
           title: string
           unit: string
           user_id: string
-          start_date?: string
         }
         Update: {
           archived_at?: string | null
           created_at?: string
           id?: string
           period?: string
+          start_date?: string
           target_value?: number
           title?: string
           unit?: string
           user_id?: string
-          start_date?: string
         }
         Relationships: []
       }
@@ -379,43 +390,59 @@ export type Database = {
     }
     Functions: {
       apply_day_template: {
-        Args: { p_template_id: string; p_day: string }
-        Returns: Database["public"]["Tables"]["time_blocks"]["Row"][]
+        Args: { p_day: string; p_template_id: string }
+        Returns: {
+          amount: number | null
+          cost: number | null
+          created_at: string
+          day: string
+          description: string
+          done: boolean
+          end_at: string
+          id: string
+          source: string
+          start_at: string
+          tags: string[]
+          title: string
+          unit: string | null
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "time_blocks"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
-      jalali_weekday: {
-        Args: { d: string }
-        Returns: number
-      }
+      jalali_weekday: { Args: { d: string }; Returns: number }
       link_notification_channel: {
-        Args: { p_kind: string; p_code: string; p_chat_id: string }
+        Args: { p_chat_id: string; p_code: string; p_kind: string }
         Returns: boolean
       }
-      tags_are_canonical: {
-        Args: { t: string[] }
-        Returns: boolean
-      }
+      tags_are_canonical: { Args: { t: string[] }; Returns: boolean }
       unlink_notification_chat: {
-        Args: { p_kind: string; p_chat_id: string }
+        Args: { p_chat_id: string; p_kind: string }
         Returns: number
       }
       update_task_schedule: {
         Args: {
+          p_effective_date: string
+          p_is_recurring: boolean
           p_task_id: string
           p_title: string
-          p_is_recurring: boolean
-          p_effective_date: string
-          p_weekdays?: number[] | null
+          p_weekdays?: number[]
         }
         Returns: string
       }
       user_tags: {
-        Args: Record<PropertyKey, never>
-        Returns: { tag: string; uses: number }[]
+        Args: never
+        Returns: {
+          tag: string
+          uses: number
+        }[]
       }
-      weekdays_are_canonical: {
-        Args: { w: number[] }
-        Returns: boolean
-      }
+      weekdays_are_canonical: { Args: { w: number[] }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
@@ -426,8 +453,125 @@ export type Database = {
   }
 }
 
-type PublicTables = Database["public"]["Tables"]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
-export type Tables<T extends keyof PublicTables> = PublicTables[T]["Row"]
-export type TablesInsert<T extends keyof PublicTables> = PublicTables[T]["Insert"]
-export type TablesUpdate<T extends keyof PublicTables> = PublicTables[T]["Update"]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never) = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never) = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const
