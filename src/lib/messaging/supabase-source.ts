@@ -3,6 +3,7 @@ import type { Database } from "../database.types";
 import { tasksForDay } from "../scoring";
 import { isBotKind } from "./bots";
 import type { DueChannel, SummarySource } from "./daily";
+import type { ReminderChat, ReminderSource } from "./reminders";
 
 // SummarySource backed by the service-role client. RLS doesn't apply to it,
 // so every query filters by user_id explicitly.
@@ -51,6 +52,32 @@ export function supabaseSummarySource(supabase: SupabaseClient<Database>): Summa
         .from("notification_channels")
         .update({ last_sent_on: day })
         .eq("id", channelId);
+      if (error) throw new Error(error.message);
+    },
+  };
+}
+
+// ReminderSource backed by the service-role client.
+export function supabaseReminderSource(supabase: SupabaseClient<Database>): ReminderSource {
+  return {
+    async claimDue() {
+      const { data, error } = await supabase.rpc("claim_due_reminders");
+      if (error) throw new Error(error.message);
+      return data;
+    },
+
+    async chatsFor(userIds) {
+      const { data, error } = await supabase
+        .from("notification_channels")
+        .select("user_id, kind, chat_id")
+        .in("user_id", userIds)
+        .not("chat_id", "is", null);
+      if (error) throw new Error(error.message);
+      return data.filter((c): c is ReminderChat => isBotKind(c.kind) && c.chat_id !== null);
+    },
+
+    async release(blockIds) {
+      const { error } = await supabase.from("time_blocks").update({ reminded_at: null }).in("id", blockIds);
       if (error) throw new Error(error.message);
     },
   };

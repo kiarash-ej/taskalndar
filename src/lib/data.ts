@@ -2,6 +2,7 @@ import { minutesOfTime } from "./blocks";
 import type { ChannelRow } from "./channels";
 import type { Tables } from "./database.types";
 import { addDays, type IsoDate } from "./dates";
+import { DEFAULT_REMINDER_SETTINGS, type ReminderSettings } from "./reminders";
 import type { BlockRow } from "./report";
 import type { ProgressData } from "./scoring";
 import type { SleepPlan } from "./sleep";
@@ -88,7 +89,7 @@ export async function loadTimeBlocks(userId: string, from: IsoDate, to: IsoDate)
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("time_blocks")
-    .select("id, day, start_at, end_at, title, description, tags, amount, unit, cost, done, source")
+    .select("id, day, start_at, end_at, title, description, tags, amount, unit, cost, done, source, remind, reminder_minutes")
     .eq("user_id", userId)
     .gte("day", from)
     .lte("day", to)
@@ -170,5 +171,31 @@ export async function loadSleepSettings(userId: string): Promise<SleepSettingsVi
       wake: minutesOfTime(p.wake_time),
     })),
     hasPhoneLink: !!settings.data?.hook_token_hash,
+  };
+}
+
+export interface ReminderSettingsView extends ReminderSettings {
+  // a linked Bale/Telegram chat to send reminders to
+  hasChat: boolean;
+}
+
+// The user's reminder settings; no row reads as the defaults.
+export async function loadReminderSettings(userId: string): Promise<ReminderSettingsView | null> {
+  const supabase = await createClient();
+  const [settings, chats] = await Promise.all([
+    supabase
+      .from("reminder_settings")
+      .select("enabled, lead_minutes, include_sleep")
+      .eq("user_id", userId)
+      .maybeSingle(),
+    supabase.from("notification_channels").select("id").eq("user_id", userId).not("chat_id", "is", null),
+  ]);
+  if (settings.error || chats.error) return null;
+  const row = settings.data;
+  return {
+    ...(row
+      ? { enabled: row.enabled, leadMinutes: row.lead_minutes, includeSleep: row.include_sleep }
+      : DEFAULT_REMINDER_SETTINGS),
+    hasChat: chats.data.length > 0,
   };
 }

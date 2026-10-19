@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { BackgroundForm } from "@/components/background-form";
 import { ChannelPanel, type ChannelView } from "@/components/channel-settings";
+import { ReminderSettingsForm } from "@/components/reminder-settings";
 import { SleepPhoneLink, SleepScheduleForm } from "@/components/sleep-settings";
 import { Card, CardHeader, PageHeader } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { channelState } from "@/lib/channels";
-import { loadChannels, loadSleepSettings } from "@/lib/data";
+import { loadChannels, loadReminderSettings, loadSleepSettings } from "@/lib/data";
 import { BOT_KINDS } from "@/lib/messaging/bots";
 import { botTokens, botUsernames } from "@/lib/messaging/config";
 import { loadBackground } from "@/lib/profile";
@@ -14,10 +15,11 @@ export const metadata: Metadata = { title: "تنظیمات" };
 
 export default async function SettingsPage() {
   const user = await requireUser();
-  const [{ background }, channels, sleep] = await Promise.all([
+  const [{ background }, channels, sleep, reminders] = await Promise.all([
     loadBackground(user.id),
     loadChannels(user.id),
     loadSleepSettings(user.id),
+    loadReminderSettings(user.id),
   ]);
 
   // Only messengers whose bot is configured on this server are offered.
@@ -38,10 +40,24 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="تنظیمات" subtitle="ظاهر برنامه، برنامهٔ خواب و خلاصهٔ روزانه را به سلیقهٔ خودتان تنظیم کنید." />
+      <PageHeader title="تنظیمات" subtitle="ظاهر برنامه، یادآوری‌ها، برنامهٔ خواب و خلاصهٔ روزانه را به سلیقهٔ خودتان تنظیم کنید." />
       <Card>
         <CardHeader title="پس‌زمینه" subtitle="یک رنگ، گرادیان یا تصویر شخصی انتخاب کنید." />
         <BackgroundForm current={background} />
+      </Card>
+
+      <Card id="reminders">
+        <CardHeader
+          title="یادآوری کارها"
+          subtitle="چند دقیقه قبل از شروع هر جعبهٔ زمانی، در بله یا تلگرام یادآوری بگیرید."
+        />
+        {reminders === null ? (
+          <p role="alert" className="rounded-xl bg-down-soft px-3 py-2 text-sm text-down">
+            تنظیمات یادآوری بارگذاری نشد. صفحه را دوباره باز کنید.
+          </p>
+        ) : (
+          <ReminderSettingsForm current={reminders} hasChat={reminders.hasChat} />
+        )}
       </Card>
 
       <Card id="sleep">

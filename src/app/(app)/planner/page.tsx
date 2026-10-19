@@ -8,7 +8,14 @@ import { TaskChecklist } from "@/components/task-checklist";
 import { DayBlocks } from "@/components/time-blocks";
 import { Card, CardHeader, iconButtonClass, ProgressBar } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
-import { loadDailyNote, loadProgressData, loadTemplates, loadTimeBlocks, loadUserTags } from "@/lib/data";
+import {
+  loadDailyNote,
+  loadProgressData,
+  loadReminderSettings,
+  loadTemplates,
+  loadTimeBlocks,
+  loadUserTags,
+} from "@/lib/data";
 import { addDays, isIsoDate, todayIso } from "@/lib/dates";
 import { faDigits, formatLongDate, formatPercent } from "@/lib/format";
 import { scorePeriod, tasksForDay } from "@/lib/scoring";
@@ -21,12 +28,13 @@ export default async function PlannerPage({ searchParams }: PageProps<"/planner"
   const { date } = await searchParams;
   const day = isIsoDate(date) ? date : today;
 
-  const [data, noteBody, blocks, templates, tagSuggestions] = await Promise.all([
+  const [data, noteBody, blocks, templates, tagSuggestions, reminders] = await Promise.all([
     loadProgressData(user.id, day, day),
     loadDailyNote(user.id, day),
     loadTimeBlocks(user.id, day, day),
     loadTemplates(user.id),
     loadUserTags(),
+    loadReminderSettings(user.id),
   ]);
   const tasks = tasksForDay(data.tasks, day);
   const doneIds = data.completions.filter((c) => c.done && c.date === day).map((c) => c.task_id);
@@ -103,6 +111,7 @@ export default async function PlannerPage({ searchParams }: PageProps<"/planner"
             blocks={blocks}
             suggestions={tagSuggestions}
             templates={templates.map((t) => ({ id: t.id, name: t.name, blockCount: t.blocks.length }))}
+            defaultLead={reminders?.enabled ? reminders.leadMinutes : null}
           />
         </Card>
 

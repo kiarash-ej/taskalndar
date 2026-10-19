@@ -3,6 +3,8 @@
 import { useActionState, useState } from "react";
 import { MAX_DESCRIPTION } from "@/lib/blocks";
 import { initialFormState, type FormState } from "@/lib/form-state";
+import { faDigits } from "@/lib/format";
+import { formatLead, LEAD_PRESETS, MAX_LEAD_MINUTES } from "@/lib/reminders";
 import { SubmitButton } from "./submit-button";
 import { TagInput } from "./tag-input";
 import { buttonClass, cx, Field, FormMessage, inputClass } from "./ui";
@@ -16,6 +18,9 @@ export interface BlockDefaults {
   amount?: string;
   unit?: string;
   cost?: string;
+  // "default", "off" or "custom" (minutes in reminderMinutes)
+  reminder?: string;
+  reminderMinutes?: string;
 }
 
 // Create or edit one time block. `action` is a bound server action; on
@@ -27,6 +32,7 @@ export function BlockForm({
   suggestions,
   submitLabel,
   onDone,
+  defaultLead,
 }: {
   idPrefix: string;
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
@@ -35,6 +41,8 @@ export function BlockForm({
   submitLabel: string;
   // called after a successful save; without it the form resets instead
   onDone?: () => void;
+  // the user's default reminder lead time; null while reminders are off
+  defaultLead: number | null;
 }) {
   const [resetKey, setResetKey] = useState(0);
   const [state, formAction] = useActionState(async (prev: FormState, formData: FormData) => {
@@ -147,6 +155,13 @@ export function BlockForm({
         />
       </Field>
 
+      <ReminderField
+        id={id("reminder")}
+        defaultLead={defaultLead}
+        initialChoice={v?.reminder ?? defaults.reminder ?? "default"}
+        initialMinutes={v?.reminder_minutes ?? defaults.reminderMinutes ?? ""}
+      />
+
       <div className="flex gap-2">
         <SubmitButton pendingText="در حال ذخیره…">{submitLabel}</SubmitButton>
         {onDone && (
@@ -156,5 +171,64 @@ export function BlockForm({
         )}
       </div>
     </form>
+  );
+}
+
+// When to be reminded of this block: the default lead time, none, or any
+// number of minutes before (with quick picks).
+function ReminderField({
+  id,
+  defaultLead,
+  initialChoice,
+  initialMinutes,
+}: {
+  id: string;
+  defaultLead: number | null;
+  initialChoice: string;
+  initialMinutes: string;
+}) {
+  const [choice, setChoice] = useState(initialChoice);
+  const [minutes, setMinutes] = useState(initialMinutes);
+
+  return (
+    <div className="space-y-2">
+      <Field label="یادآوری" htmlFor={id}>
+        <select id={id} name="reminder" value={choice} onChange={(e) => setChoice(e.target.value)} className={inputClass}>
+          <option value="default">
+            {defaultLead === null ? "پیش‌فرض (یادآوری‌ها خاموش است)" : `پیش‌فرض: ${formatLead(defaultLead)}`}
+          </option>
+          <option value="custom">زمان دلخواه برای این جعبه</option>
+          <option value="off">بدون یادآوری</option>
+        </select>
+      </Field>
+      {choice === "custom" && (
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            name="reminder_minutes"
+            inputMode="numeric"
+            required
+            aria-label="چند دقیقه قبل"
+            value={minutes}
+            onChange={(e) => setMinutes(e.target.value)}
+            placeholder="۱۰"
+            className={cx(inputClass, "w-24!")}
+          />
+          <span className="text-sm text-muted">دقیقه قبل (تا {faDigits(MAX_LEAD_MINUTES)})</span>
+          {LEAD_PRESETS.map((preset) => (
+            <button
+              key={preset}
+              type="button"
+              onClick={() => setMinutes(String(preset))}
+              className={cx(
+                "rounded-full border px-2.5 py-0.5 text-xs",
+                minutes === String(preset) ? "border-accent bg-accent-soft text-accent" : "border-line text-muted",
+              )}
+            >
+              {preset === 0 ? "سر وقت" : faDigits(preset)}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

@@ -54,6 +54,8 @@ describe("createBlock", () => {
     expect(result).toEqual({});
     expect(mocks.insert).toHaveBeenCalledWith({
       user_id: "owner",
+      remind: true,
+      reminder_minutes: null,
       day: DAY,
       start_at: "2026-10-15T12:30:00.000Z",
       end_at: "2026-10-15T20:30:00.000Z",
@@ -64,6 +66,11 @@ describe("createBlock", () => {
       unit: null,
       cost: null,
     });
+  });
+
+  it("stores a block's own reminder time", async () => {
+    await createBlock(DAY, {}, form({ title: "درس", start: "16:00", end: "18:00", reminder: "custom", reminder_minutes: "۲۵" }));
+    expect(mocks.insert).toHaveBeenCalledWith(expect.objectContaining({ remind: true, reminder_minutes: 25 }));
   });
 
   it("keeps what was typed on a validation error", async () => {

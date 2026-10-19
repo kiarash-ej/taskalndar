@@ -28,6 +28,7 @@
 - [x] مسیرهای محافظت‌شده در [`src/proxy.ts`](src/proxy.ts)
 - [x] مایگریشن [`add_task_date`](supabase/migrations/20261001124442_add_task_date.sql) (ستون `tasks.date`) روی Supabase اعمال شد
 - [x] برنامهٔ خواب: ساعت خواب و بیداری هر شب، جعبه‌های خواب خودکار در برنامهٔ روزانه، و لینک گوشی برای ثبت خودکار موقع تنظیم زنگ ساعت ([قرارداد](docs/planner-v2-contract.md#مرحلهٔ-۶--برنامهٔ-خواب-پیادهسازیشده)). مایگریشن `sleep_schedule` هنوز روی Supabase اعمال نشده
+- [x] یادآوری: پیام بله/تلگرام چند دقیقه قبل از هر جعبهٔ زمانی، با زمان پیش‌فرض دلخواه و زمان جدا برای هر جعبه. مایگریشن `reminders` هنوز روی Supabase اعمال نشده و cron باید به `cron-tick.mjs` تغییر کند
 - [ ] تنظیم Site URL / Redirect URL در Supabase Auth برای دامنهٔ Railway، و تست دپلوی پس از merge به `main`
 
 جزئیات کامل در [task-split-plan.md](docs/task-split-plan.md).
@@ -45,7 +46,7 @@
 `src/lib/database.types.ts` را دوباره تولید کنید. قرارداد دادهٔ پلنر نسخهٔ ۲ در
 [docs/planner-v2-contract.md](docs/planner-v2-contract.md) است.
 
-## خلاصهٔ روزانه در بله/تلگرام
+## خلاصهٔ روزانه و یادآوری در بله/تلگرام
 
 اختیاری است؛ بدون این متغیرها اپ عادی کار می‌کند. روی سرویس اپ در Railway تنظیم کنید:
 
@@ -58,8 +59,11 @@
 
 1. webhook هر بات را ثبت کنید: `setWebhook` با آدرس
    `https://<دامنهٔ اپ>/api/bot/bale?secret=<BOT_WEBHOOK_SECRET>` (برای تلگرام `.../api/bot/telegram`).
-2. در Railway یک سرویس cron از همین ریپو بسازید با زمان‌بندی `*/15 * * * *`، دستور شروع
-   `node scripts/trigger-daily-summary.mjs`، و متغیرهای `APP_URL` و `CRON_SECRET`.
+2. در Railway یک سرویس cron از همین ریپو بسازید با زمان‌بندی `*/5 * * * *`، دستور شروع
+   `node scripts/cron-tick.mjs`، و متغیرهای `APP_URL` و `CRON_SECRET`. هر اجرا خلاصه‌های موعدرسیده را
+   می‌فرستد و تا ۵ دقیقه، هر دقیقه یادآوری‌های جعبه‌های زمانی را بررسی می‌کند (کوتاه‌ترین زمان‌بندی
+   Railway پنج دقیقه است). سرویسی که هنوز `trigger-daily-summary.mjs` هر ۱۵ دقیقه را اجرا می‌کند فقط
+   خلاصه می‌فرستد.
 
 ## منطق مشترک (`packages/core`)
 

@@ -265,6 +265,33 @@ export type Database = {
         }
         Relationships: []
       }
+      reminder_settings: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          include_sleep: boolean
+          lead_minutes: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          include_sleep?: boolean
+          lead_minutes?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          include_sleep?: boolean
+          lead_minutes?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       sleep_schedules: {
         Row: {
           bedtime: string
@@ -391,6 +418,9 @@ export type Database = {
           done: boolean
           end_at: string
           id: string
+          remind: boolean
+          reminded_at: string | null
+          reminder_minutes: number | null
           sleep_night: string | null
           source: string
           start_at: string
@@ -409,6 +439,9 @@ export type Database = {
           done?: boolean
           end_at: string
           id?: string
+          remind?: boolean
+          reminded_at?: string | null
+          reminder_minutes?: number | null
           sleep_night?: string | null
           source?: string
           start_at: string
@@ -427,6 +460,9 @@ export type Database = {
           done?: boolean
           end_at?: string
           id?: string
+          remind?: boolean
+          reminded_at?: string | null
+          reminder_minutes?: number | null
           sleep_night?: string | null
           source?: string
           start_at?: string
@@ -454,6 +490,9 @@ export type Database = {
           done: boolean
           end_at: string
           id: string
+          remind: boolean
+          reminded_at: string | null
+          reminder_minutes: number | null
           sleep_night: string | null
           source: string
           start_at: string
@@ -469,6 +508,17 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      claim_due_reminders: {
+        Args: never
+        Returns: {
+          block_id: string
+          end_at: string
+          is_sleep: boolean
+          start_at: string
+          title: string
+          user_id: string
+        }[]
       }
       fill_sleep_blocks: { Args: { p_until: string }; Returns: number }
       jalali_weekday: { Args: { d: string }; Returns: number }

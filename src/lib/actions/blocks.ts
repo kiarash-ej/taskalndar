@@ -5,18 +5,22 @@ import { getCurrentUser } from "../auth";
 import { clockOf, clockToInstant, formatClock, parseBlockForm, parseTagFields, type BlockFields } from "../blocks";
 import { isIsoDate } from "../dates";
 import { formValues, GENERIC_ERROR, type FormState } from "../form-state";
+import { parseBlockReminder, type BlockReminder } from "../reminders";
 import { createClient } from "../supabase/server";
 
 const SIGNED_OUT = "ابتدا وارد حساب خود شوید.";
-const BLOCK_FIELDS = ["title", "start", "end", "description", "amount", "unit", "cost", "tag_draft"];
+const BLOCK_FIELDS = [
+  "title", "start", "end", "description", "amount", "unit", "cost", "tag_draft", "reminder", "reminder_minutes",
+];
 
 // What a failed submit gives back to the form, tag chips included.
 function blockValues(formData: FormData): Record<string, string> {
   return { ...formValues(formData, BLOCK_FIELDS), tags: parseTagFields(formData).join(",") };
 }
 
-function blockRow(day: string, fields: BlockFields) {
+function blockRow(day: string, fields: BlockFields, reminder: BlockReminder) {
   return {
+    ...reminder,
     day,
     start_at: clockToInstant(day, fields.start),
     end_at: clockToInstant(day, fields.end),
@@ -36,9 +40,11 @@ export async function createBlock(day: string, _prev: FormState, formData: FormD
   if (!isIsoDate(day)) return { error: GENERIC_ERROR, values };
   const fields = parseBlockForm(formData);
   if ("error" in fields) return { error: fields.error, values };
+  const reminder = parseBlockReminder(formData);
+  if ("error" in reminder) return { error: reminder.error, values };
 
   const supabase = await createClient();
-  const { error } = await supabase.from("time_blocks").insert({ user_id: user.id, ...blockRow(day, fields) });
+  const { error } = await supabase.from("time_blocks").insert({ user_id: user.id, ...blockRow(day, fields, reminder) });
   if (error) return { error: GENERIC_ERROR, values };
 
   refresh();
@@ -57,9 +63,11 @@ export async function updateBlock(
   if (!isIsoDate(day)) return { error: GENERIC_ERROR, values };
   const fields = parseBlockForm(formData);
   if ("error" in fields) return { error: fields.error, values };
+  const reminder = parseBlockReminder(formData);
+  if ("error" in reminder) return { error: reminder.error, values };
 
   const supabase = await createClient();
-  const { error } = await supabase.from("time_blocks").update(blockRow(day, fields)).eq("id", blockId);
+  const { error } = await supabase.from("time_blocks").update(blockRow(day, fields, reminder)).eq("id", blockId);
   if (error) return { error: GENERIC_ERROR, values };
 
   refresh();

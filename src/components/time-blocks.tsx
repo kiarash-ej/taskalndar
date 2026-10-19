@@ -14,9 +14,10 @@ import { clockOf, formatClock, formatClockRange, MINUTES_PER_DAY } from "@/lib/b
 import type { IsoDate } from "@/lib/dates";
 import { initialFormState } from "@/lib/form-state";
 import { faNumber } from "@/lib/format";
+import { formatLead } from "@/lib/reminders";
 import type { BlockRow } from "@/lib/report";
 import { BlockForm } from "./block-form";
-import { Moon, Pencil, Trash } from "./icons";
+import { Bell, Moon, Pencil, Trash } from "./icons";
 import { SubmitButton } from "./submit-button";
 import { buttonClass, cx, FormMessage, iconButtonClass, inputClass } from "./ui";
 
@@ -33,12 +34,15 @@ export function DayBlocks({
   blocks,
   suggestions,
   templates,
+  defaultLead,
 }: {
   day: IsoDate;
   // in start order
   blocks: BlockRow[];
   suggestions: string[];
   templates: TemplateOption[];
+  // the user's default reminder lead time; null while reminders are off
+  defaultLead: number | null;
 }) {
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +62,14 @@ export function DayBlocks({
       ) : (
         <ul className="divide-y divide-line">
           {blocks.map((block) => (
-            <BlockItem key={block.id} day={day} block={block} suggestions={suggestions} onError={setError} />
+            <BlockItem
+              key={block.id}
+              day={day}
+              block={block}
+              suggestions={suggestions}
+              defaultLead={defaultLead}
+              onError={setError}
+            />
           ))}
         </ul>
       )}
@@ -70,6 +81,7 @@ export function DayBlocks({
             action={createBlock.bind(null, day)}
             suggestions={suggestions}
             submitLabel="افزودن جعبه"
+            defaultLead={defaultLead}
           />
           <button type="button" onClick={() => setAdding(false)} className={cx(buttonClass.ghost, "mt-2")}>
             بستن
@@ -98,11 +110,13 @@ function BlockItem({
   day,
   block,
   suggestions,
+  defaultLead,
   onError,
 }: {
   day: IsoDate;
   block: BlockRow;
   suggestions: string[];
+  defaultLead: number | null;
   onError: (error: string | null) => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -111,6 +125,8 @@ function BlockItem({
   const start = clockOf(day, block.start_at);
   const end = clockOf(day, block.end_at);
   const checkboxId = `block-${block.id}`;
+  // only a block's own lead time is shown; the default would be on every block
+  const reminderLabel = !block.remind ? "بدون یادآوری" : block.reminder_minutes !== null ? formatLead(block.reminder_minutes) : null;
 
   if (editing) {
     return (
@@ -121,7 +137,10 @@ function BlockItem({
           suggestions={suggestions}
           submitLabel="ذخیره"
           onDone={() => setEditing(false)}
+          defaultLead={defaultLead}
           defaults={{
+            reminder: !block.remind ? "off" : block.reminder_minutes === null ? "default" : "custom",
+            reminderMinutes: block.reminder_minutes === null ? "" : String(block.reminder_minutes),
             title: block.title,
             start: formatClock(start),
             // <input type="time"> has no 24:00; 00:00 after the start means midnight
@@ -177,8 +196,14 @@ function BlockItem({
             {block.title}
           </label>
         </div>
-        {(block.tags.length > 0 || block.amount !== null || block.cost !== null) && (
+        {(block.tags.length > 0 || block.amount !== null || block.cost !== null || reminderLabel) && (
           <div className="flex flex-wrap items-center gap-1.5 text-xs">
+            {reminderLabel && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-muted">
+                <Bell width={12} height={12} />
+                {reminderLabel}
+              </span>
+            )}
             {block.tags.map((tag) => (
               <span key={tag} className="rounded-full bg-accent-soft px-2 py-0.5 text-accent">
                 #{tag}

@@ -10,7 +10,8 @@ import { normalizeTag, normalizeTags } from "./tags";
 // source: manual, timer or sleep (from the sleep schedule or the phone link)
 export type BlockRow = Pick<
   Tables<"time_blocks">,
-  "id" | "day" | "start_at" | "end_at" | "title" | "description" | "tags" | "amount" | "unit" | "cost" | "done" | "source"
+  | "id" | "day" | "start_at" | "end_at" | "title" | "description" | "tags" | "amount" | "unit" | "cost" | "done"
+  | "source" | "remind" | "reminder_minutes"
 >;
 
 export interface ReportFilter {

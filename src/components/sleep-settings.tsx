@@ -73,31 +73,38 @@ export function SleepScheduleForm({ plans }: { plans: SleepPlan[] }) {
                 خواب
                 <input
                   type="time"
+                  dir="ltr"
                   name={`bed_${weekday}`}
                   value={row.bed}
                   disabled={!row.on}
                   required={row.on}
                   onChange={(e) => update(weekday, { bed: e.target.value })}
-                  className={cx(inputClass, "w-28")}
+                  className={cx(inputClass, "w-32!")}
                 />
               </label>
               <label className="flex items-center gap-1.5 text-sm text-muted">
                 بیداری
                 <input
                   type="time"
+                  dir="ltr"
                   name={`wake_${weekday}`}
                   value={row.wake}
                   disabled={!row.on}
                   required={row.on}
                   onChange={(e) => update(weekday, { wake: e.target.value })}
-                  className={cx(inputClass, "w-28")}
+                  className={cx(inputClass, "w-32!")}
                 />
               </label>
               {row.on && bed !== null && wake !== null && (
                 <span className={cx("text-xs", valid ? "text-muted" : "text-down")}>
-                  {valid
-                    ? `${nightSpan(weekday, bed, wake)} · ${formatSleepLength(length)}`
-                    : "باید بین ۱ تا ۱۶ ساعت باشد"}
+                  {valid ? (
+                    // isolated, or the digits pull the parts out of order
+                    <>
+                      <bdi>{nightSpan(weekday, bed, wake)}</bdi> · <bdi>{formatSleepLength(length)}</bdi>
+                    </>
+                  ) : (
+                    "باید بین ۱ تا ۱۶ ساعت باشد"
+                  )}
                 </span>
               )}
             </li>
