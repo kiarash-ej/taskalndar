@@ -111,6 +111,8 @@ export async function saveDayAsTemplate(day: string, _prev: FormState, formData:
     .select("start_at, end_at, title, tags")
     .eq("user_id", user.id)
     .eq("day", day)
+    // the sleep schedule already puts those on every day
+    .neq("source", "sleep")
     .order("start_at");
   if (readError) return { error: GENERIC_ERROR, values };
   if (blocks.length === 0) return { error: "این روز جعبه‌ای ندارد که در تمپلیت ذخیره شود.", values };

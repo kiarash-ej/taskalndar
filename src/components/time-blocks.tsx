@@ -16,7 +16,7 @@ import { initialFormState } from "@/lib/form-state";
 import { faNumber } from "@/lib/format";
 import type { BlockRow } from "@/lib/report";
 import { BlockForm } from "./block-form";
-import { Pencil, Trash } from "./icons";
+import { Moon, Pencil, Trash } from "./icons";
 import { SubmitButton } from "./submit-button";
 import { buttonClass, cx, FormMessage, iconButtonClass, inputClass } from "./ui";
 
@@ -82,6 +82,14 @@ export function DayBlocks({
       )}
 
       <TemplateControls day={day} hasBlocks={blocks.length > 0} templates={templates} onError={setError} />
+
+      <p className="text-xs text-muted">
+        جعبه‌های خواب از{" "}
+        <Link href="/settings#sleep" className="font-semibold text-accent hover:underline">
+          برنامهٔ خواب
+        </Link>{" "}
+        خودکار ساخته می‌شوند.
+      </p>
     </div>
   );
 }
@@ -163,6 +171,9 @@ function BlockItem({
             htmlFor={checkboxId}
             className={cx("min-w-0 break-words font-medium", done && "text-muted line-through decoration-muted/60")}
           >
+            {block.source === "sleep" && (
+              <Moon className="me-1 inline-block align-[-3px] text-accent" />
+            )}
             {block.title}
           </label>
         </div>

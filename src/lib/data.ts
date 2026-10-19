@@ -1,8 +1,10 @@
+import { minutesOfTime } from "./blocks";
 import type { ChannelRow } from "./channels";
 import type { Tables } from "./database.types";
-import type { IsoDate } from "./dates";
+import { addDays, type IsoDate } from "./dates";
 import type { BlockRow } from "./report";
 import type { ProgressData } from "./scoring";
+import type { SleepPlan } from "./sleep";
 import { createClient } from "./supabase/server";
 
 // RLS already limits every query to the signed-in user's rows; the explicit
@@ -70,11 +72,23 @@ export async function loadDailyNote(userId: string, day: IsoDate): Promise<strin
 
 // The user's time blocks on the days from..to (both inclusive), in time order:
 // the input of the monthly report (filterBlocks).
+// Creates the sleep schedule's blocks for nights not yet on the planner, up to
+// the night starting on `through` (the database keeps at least two weeks
+// ahead). A failure only means missing sleep blocks, never a broken page.
+export async function ensureSleepBlocks(through: IsoDate): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fill_sleep_blocks", { p_until: through });
+  if (error) console.error("fill_sleep_blocks failed:", error.message);
+}
+
 export async function loadTimeBlocks(userId: string, from: IsoDate, to: IsoDate): Promise<BlockRow[]> {
+  // the night starting the day after `to` has no part in range, but `to`
+  // itself may hold the end of its own night's sleep
+  await ensureSleepBlocks(addDays(to, 1));
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("time_blocks")
-    .select("id, day, start_at, end_at, title, description, tags, amount, unit, cost, done")
+    .select("id, day, start_at, end_at, title, description, tags, amount, unit, cost, done, source")
     .eq("user_id", userId)
     .gte("day", from)
     .lte("day", to)
@@ -134,4 +148,27 @@ export async function loadChannels(userId: string): Promise<ChannelRow[] | null>
     .eq("user_id", userId)
     .order("kind");
   return error ? null : data;
+}
+
+export interface SleepSettingsView {
+  plans: SleepPlan[];
+  hasPhoneLink: boolean;
+}
+
+// The user's weekly sleep schedule; null when it couldn't be read.
+export async function loadSleepSettings(userId: string): Promise<SleepSettingsView | null> {
+  const supabase = await createClient();
+  const [plans, settings] = await Promise.all([
+    supabase.from("sleep_schedules").select("weekday, bedtime, wake_time").eq("user_id", userId).order("weekday"),
+    supabase.from("sleep_settings").select("hook_token_hash").eq("user_id", userId).maybeSingle(),
+  ]);
+  if (plans.error || settings.error) return null;
+  return {
+    plans: plans.data.map((p) => ({
+      weekday: p.weekday,
+      bedtime: minutesOfTime(p.bedtime),
+      wake: minutesOfTime(p.wake_time),
+    })),
+    hasPhoneLink: !!settings.data?.hook_token_hash,
+  };
 }

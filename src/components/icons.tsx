@@ -55,3 +55,9 @@ export const Archive = (p: SVGProps<SVGSVGElement>) => (
     <path d="M3 5h18v4H3zM5 9v10h14V9M10 13h4" />
   </Icon>
 );
+
+export const Moon = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" />
+  </Icon>
+);

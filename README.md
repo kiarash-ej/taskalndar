@@ -8,6 +8,7 @@
 
 - [docs/spec.md](docs/spec.md) — مشخصات کامل محصول: مدل داده، فرمول محاسبهٔ پیشرفت، صفحات، فناوری
 - [docs/task-split-plan.md](docs/task-split-plan.md) — تقسیم تسک‌ها بین دو نفر (بک‌اند/فرانت‌اند) و ترتیب کار
+- [docs/automation-ideas.md](docs/automation-ideas.md) — ایده‌های بعدی برای خودکار کردن زمان‌بندی کارها
 
 ## فناوری
 
@@ -26,6 +27,7 @@
 - [x] اپ Next.js (نفر دوم): ورود/ثبت‌نام، داشبورد، برنامهٔ روزانه با تقویم شمسی، هدف‌ها، آمار با نمودار
 - [x] مسیرهای محافظت‌شده در [`src/proxy.ts`](src/proxy.ts)
 - [x] مایگریشن [`add_task_date`](supabase/migrations/20261001124442_add_task_date.sql) (ستون `tasks.date`) روی Supabase اعمال شد
+- [x] برنامهٔ خواب: ساعت خواب و بیداری هر شب، جعبه‌های خواب خودکار در برنامهٔ روزانه، و لینک گوشی برای ثبت خودکار موقع تنظیم زنگ ساعت ([قرارداد](docs/planner-v2-contract.md#مرحلهٔ-۶--برنامهٔ-خواب-پیادهسازیشده)). مایگریشن `sleep_schedule` هنوز روی Supabase اعمال نشده
 - [ ] تنظیم Site URL / Redirect URL در Supabase Auth برای دامنهٔ Railway، و تست دپلوی پس از merge به `main`
 
 جزئیات کامل در [task-split-plan.md](docs/task-split-plan.md).

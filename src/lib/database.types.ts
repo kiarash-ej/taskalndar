@@ -265,6 +265,57 @@ export type Database = {
         }
         Relationships: []
       }
+      sleep_schedules: {
+        Row: {
+          bedtime: string
+          created_at: string
+          user_id: string
+          wake_time: string
+          weekday: number
+        }
+        Insert: {
+          bedtime: string
+          created_at?: string
+          user_id: string
+          wake_time: string
+          weekday: number
+        }
+        Update: {
+          bedtime?: string
+          created_at?: string
+          user_id?: string
+          wake_time?: string
+          weekday?: number
+        }
+        Relationships: []
+      }
+      sleep_settings: {
+        Row: {
+          applies_from: string | null
+          created_at: string
+          filled_through: string | null
+          hook_token_hash: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          applies_from?: string | null
+          created_at?: string
+          filled_through?: string | null
+          hook_token_hash?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          applies_from?: string | null
+          created_at?: string
+          filled_through?: string | null
+          hook_token_hash?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       task_completions: {
         Row: {
           date: string
@@ -340,6 +391,7 @@ export type Database = {
           done: boolean
           end_at: string
           id: string
+          sleep_night: string | null
           source: string
           start_at: string
           tags: string[]
@@ -357,6 +409,7 @@ export type Database = {
           done?: boolean
           end_at: string
           id?: string
+          sleep_night?: string | null
           source?: string
           start_at: string
           tags?: string[]
@@ -374,6 +427,7 @@ export type Database = {
           done?: boolean
           end_at?: string
           id?: string
+          sleep_night?: string | null
           source?: string
           start_at?: string
           tags?: string[]
@@ -400,6 +454,7 @@ export type Database = {
           done: boolean
           end_at: string
           id: string
+          sleep_night: string | null
           source: string
           start_at: string
           tags: string[]
@@ -415,10 +470,27 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      fill_sleep_blocks: { Args: { p_until: string }; Returns: number }
       jalali_weekday: { Args: { d: string }; Returns: number }
       link_notification_channel: {
         Args: { p_chat_id: string; p_code: string; p_kind: string }
         Returns: boolean
+      }
+      save_sleep_schedule: {
+        Args: { p_bedtimes: string[]; p_wake_times: string[]; p_weekdays: number[] }
+        Returns: undefined
+      }
+      set_sleep_night: {
+        Args: { p_bed_at: string; p_night: string; p_user: string; p_wake_at: string }
+        Returns: undefined
+      }
+      sleep_minutes: {
+        Args: { p_bedtime: string; p_wake_time: string }
+        Returns: number
+      }
+      sleep_night_start: {
+        Args: { p_bedtime: string; p_night: string }
+        Returns: string
       }
       tags_are_canonical: { Args: { t: string[] }; Returns: boolean }
       unlink_notification_chat: {

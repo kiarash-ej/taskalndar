@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   rpc: vi.fn(),
   blocks: vi.fn(),
   deleteEq: vi.fn(),
+  neq: vi.fn(),
 }));
 vi.mock("../auth", () => ({ getCurrentUser: mocks.user }));
 vi.mock("../supabase/server", () => ({ createClient: mocks.client }));
@@ -29,9 +30,10 @@ beforeEach(() => {
       select: () => ({ single: () => Promise.resolve({ data: { id: "tpl" }, error: null }) }),
     });
   });
-  const read = { select: vi.fn(), eq: vi.fn(), order: mocks.blocks };
+  const read = { select: vi.fn(), eq: vi.fn(), neq: mocks.neq, order: mocks.blocks };
   read.select.mockReturnValue(read);
   read.eq.mockReturnValue(read);
+  read.neq.mockReturnValue(read);
   mocks.client.mockResolvedValue({
     from: vi.fn(() => ({ ...read, insert: mocks.insert, delete: () => ({ eq: mocks.deleteEq }) })),
     rpc: mocks.rpc,
@@ -88,6 +90,8 @@ describe("templates", () => {
     expect(mocks.insert).toHaveBeenLastCalledWith([
       { template_id: "tpl", user_id: "owner", start_time: "22:00", end_time: "24:00", title: "خواب", tags: [] },
     ]);
+    // the sleep schedule's own blocks stay out of templates
+    expect(mocks.neq).toHaveBeenCalledWith("source", "sleep");
   });
 
   it("refuses to save an empty day as a template", async () => {

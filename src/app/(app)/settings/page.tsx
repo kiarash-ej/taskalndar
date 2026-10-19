@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { BackgroundForm } from "@/components/background-form";
 import { ChannelPanel, type ChannelView } from "@/components/channel-settings";
+import { SleepPhoneLink, SleepScheduleForm } from "@/components/sleep-settings";
 import { Card, CardHeader, PageHeader } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { channelState } from "@/lib/channels";
-import { loadChannels } from "@/lib/data";
+import { loadChannels, loadSleepSettings } from "@/lib/data";
 import { BOT_KINDS } from "@/lib/messaging/bots";
 import { botTokens, botUsernames } from "@/lib/messaging/config";
 import { loadBackground } from "@/lib/profile";
@@ -13,7 +14,11 @@ export const metadata: Metadata = { title: "تنظیمات" };
 
 export default async function SettingsPage() {
   const user = await requireUser();
-  const [{ background }, channels] = await Promise.all([loadBackground(user.id), loadChannels(user.id)]);
+  const [{ background }, channels, sleep] = await Promise.all([
+    loadBackground(user.id),
+    loadChannels(user.id),
+    loadSleepSettings(user.id),
+  ]);
 
   // Only messengers whose bot is configured on this server are offered.
   const tokens = botTokens();
@@ -33,10 +38,35 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="تنظیمات" subtitle="ظاهر برنامه و خلاصهٔ روزانه را به سلیقهٔ خودتان تنظیم کنید." />
+      <PageHeader title="تنظیمات" subtitle="ظاهر برنامه، برنامهٔ خواب و خلاصهٔ روزانه را به سلیقهٔ خودتان تنظیم کنید." />
       <Card>
         <CardHeader title="پس‌زمینه" subtitle="یک رنگ، گرادیان یا تصویر شخصی انتخاب کنید." />
         <BackgroundForm current={background} />
+      </Card>
+
+      <Card id="sleep">
+        <CardHeader
+          title="برنامهٔ خواب"
+          subtitle="ساعت خواب و بیداری هر شب را یک بار تنظیم کنید؛ در برنامهٔ روزانه خودکار چیده می‌شود."
+        />
+        {sleep === null ? (
+          <p role="alert" className="rounded-xl bg-down-soft px-3 py-2 text-sm text-down">
+            برنامهٔ خواب بارگذاری نشد. صفحه را دوباره باز کنید.
+          </p>
+        ) : (
+          <SleepScheduleForm plans={sleep.plans} />
+        )}
+      </Card>
+
+      <Card>
+        <CardHeader
+          title="ثبت خودکار خواب از گوشی"
+          subtitle="وقتی زنگ ساعت گوشی را تنظیم می‌کنید یا می‌خوابید، ساعت خواب و بیداری خودش ثبت شود."
+        />
+        <SleepPhoneLink
+          hasLink={sleep?.hasPhoneLink ?? false}
+          available={!!process.env.SUPABASE_SERVICE_ROLE_KEY}
+        />
       </Card>
 
       <Card>
