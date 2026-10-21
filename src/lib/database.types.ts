@@ -318,27 +318,39 @@ export type Database = {
       }
       sleep_settings: {
         Row: {
-          applies_from: string | null
           created_at: string
-          filled_through: string | null
           hook_token_hash: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
-          applies_from?: string | null
           created_at?: string
-          filled_through?: string | null
           hook_token_hash?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
-          applies_from?: string | null
           created_at?: string
-          filled_through?: string | null
           hook_token_hash?: string | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sleep_skips: {
+        Row: {
+          created_at: string
+          night: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          night: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          night?: string
           user_id?: string
         }
         Relationships: []
@@ -520,7 +532,6 @@ export type Database = {
           user_id: string
         }[]
       }
-      fill_sleep_blocks: { Args: { p_until: string }; Returns: number }
       jalali_weekday: { Args: { d: string }; Returns: number }
       link_notification_channel: {
         Args: { p_chat_id: string; p_code: string; p_kind: string }

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useOptimistic, useState, useTransition } from "react";
+import { acceptSleepSuggestion, skipSleepSuggestion } from "@/lib/actions/sleep";
 import {
   applyTemplate,
   createBlock,
@@ -15,6 +16,7 @@ import type { IsoDate } from "@/lib/dates";
 import { initialFormState } from "@/lib/form-state";
 import { faNumber } from "@/lib/format";
 import { formatLead } from "@/lib/reminders";
+import type { SleepSuggestion } from "@/lib/sleep";
 import type { BlockRow } from "@/lib/report";
 import { BlockForm } from "./block-form";
 import { Bell, Moon, Pencil, Trash } from "./icons";
@@ -35,10 +37,13 @@ export function DayBlocks({
   suggestions,
   templates,
   defaultLead,
+  sleepSuggestions,
 }: {
   day: IsoDate;
   // in start order
   blocks: BlockRow[];
+  // nights the sleep schedule suggests, not on the planner yet
+  sleepSuggestions: SleepSuggestion[];
   suggestions: string[];
   templates: TemplateOption[];
   // the user's default reminder lead time; null while reminders are off
@@ -55,8 +60,16 @@ export function DayBlocks({
         </p>
       )}
 
+      {sleepSuggestions.length > 0 && (
+        <ul className="space-y-2">
+          {sleepSuggestions.map((s) => (
+            <SleepSuggestionItem key={s.night} day={day} suggestion={s} onError={setError} />
+          ))}
+        </ul>
+      )}
+
       {blocks.length === 0 ? (
-        <p className="rounded-xl bg-surface-2 px-4 py-6 text-center text-sm text-muted">
+        sleepSuggestions.length === 0 && <p className="rounded-xl bg-surface-2 px-4 py-6 text-center text-sm text-muted">
           برای این روز جعبه‌ای نیست. یک بازهٔ زمانی اضافه کنید یا تمپلیتی را اعمال کنید.
         </p>
       ) : (
@@ -96,13 +109,72 @@ export function DayBlocks({
       <TemplateControls day={day} hasBlocks={blocks.length > 0} templates={templates} onError={setError} />
 
       <p className="text-xs text-muted">
-        جعبه‌های خواب از{" "}
+        پیشنهادهای خواب از{" "}
         <Link href="/settings#sleep" className="font-semibold text-accent hover:underline">
           برنامهٔ خواب
         </Link>{" "}
-        خودکار ساخته می‌شوند.
+        می‌آیند و تا «ثبت» را نزنید چیزی ذخیره نمی‌شود.
       </p>
     </div>
+  );
+}
+
+// A night the sleep schedule suggests: shown, not saved, until accepted.
+function SleepSuggestionItem({
+  day,
+  suggestion,
+  onError,
+}: {
+  day: IsoDate;
+  suggestion: SleepSuggestion;
+  onError: (error: string | null) => void;
+}) {
+  const [pending, startTransition] = useTransition();
+  // the part of the night on this day
+  const start = Math.max(0, clockOf(day, suggestion.bedAt));
+  const end = Math.min(MINUTES_PER_DAY, clockOf(day, suggestion.wakeAt));
+
+  function run(task: () => Promise<{ error?: string }>) {
+    onError(null);
+    startTransition(async () => {
+      const result = await task();
+      if (result.error) onError(result.error);
+    });
+  }
+
+  return (
+    <li
+      className={cx(
+        "flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-dashed border-accent/50 bg-accent-soft/40 px-3 py-2",
+        pending && "opacity-60",
+      )}
+    >
+      <Moon className="text-accent" />
+      <div className="min-w-0 flex-1">
+        <span className="text-sm font-semibold text-accent tabular-nums">{formatClockRange(start, end)}</span>{" "}
+        <span className="font-medium">خواب</span>
+        <span className="ms-2 text-xs text-muted">پیشنهاد از برنامهٔ خواب</span>
+      </div>
+      <div className="flex gap-1.5">
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => run(() => acceptSleepSuggestion(suggestion.night))}
+          className={cx(buttonClass.primary, "px-3 py-1")}
+        >
+          ثبت
+        </button>
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => run(() => skipSleepSuggestion(suggestion.night))}
+          className={cx(buttonClass.ghost, "px-3 py-1")}
+          aria-label="این شب پیشنهاد نشود"
+        >
+          نه
+        </button>
+      </div>
+    </li>
   );
 }
 

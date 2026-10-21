@@ -1,15 +1,10 @@
 import type { PGlite } from "@electric-sql/pglite";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { addDays } from "./dates";
 import { migratedDb, OTHER, OWNER } from "./test-db";
 
 let db: PGlite;
-let today: string;
 
-beforeAll(async () => {
-  db = await migratedDb();
-  today = (await db.query<{ day: string }>("select (now() at time zone 'Asia/Tehran')::date::text as day")).rows[0].day;
-}, 30_000);
+beforeAll(async () => { db = await migratedDb(); }, 30_000);
 afterAll(async () => { await db?.close(); });
 beforeEach(async () => {
   await db.exec(`begin; set local role authenticated; set local request.jwt.claim.sub = '${OWNER}';`);
@@ -34,10 +29,6 @@ async function save(weekdays: number[], bed: string, wake: string) {
     weekdays.map(() => bed),
     weekdays.map(() => wake),
   ]);
-}
-
-async function fill(until: string) {
-  return (await db.query<{ n: number }>("select public.fill_sleep_blocks($1) as n", [until])).rows[0].n;
 }
 
 // a night's blocks as "day start-end" in Tehran time
@@ -85,82 +76,25 @@ describe("set_sleep_night", () => {
 });
 
 describe("sleep schedule", () => {
-  it("does nothing before a schedule is saved", async () => {
-    expect(await fill(addDays(today, 3))).toBe(0);
-    expect(await rows("select 1 from public.time_blocks")).toEqual([]);
-  });
-
-  it("fills upcoming nights at least two weeks ahead, a night at most once", async () => {
-    await save(EVERY_NIGHT, "23:00", "07:00");
-    const created = await fill(addDays(today, 3));
-    // tonight through two weeks from today; nights already started are skipped
-    expect(created).toBeGreaterThanOrEqual(14);
-    expect(created).toBeLessThanOrEqual(16);
-    const tomorrow = addDays(today, 1);
-    expect((await night(tomorrow)).map((b) => b.span)).toEqual([
-      `${tomorrow} 23:00-00:00`,
-      `${addDays(tomorrow, 1)} 00:00-07:00`,
+  it("replaces the weekly schedule and leaves blocks alone", async () => {
+    await db.query("select public.set_sleep_night($1, $2, $3, $4)", [
+      OWNER, "2026-10-13", "2026-10-13T23:00:00+03:30", "2026-10-14T07:00:00+03:30",
     ]);
-    expect(await fill(addDays(today, 3))).toBe(0);
-    expect(await rows("select count(*)::int as n from public.time_blocks where sleep_night = $1", [tomorrow]))
-      .toEqual([{ n: 2 }]);
-  });
-
-  it("puts a bedtime before noon after the night's midnight", async () => {
-    await save(EVERY_NIGHT, "01:30", "09:00");
-    await fill(today);
-    const n = addDays(today, 2);
-    expect((await night(n)).map((b) => b.span)).toEqual([`${addDays(n, 1)} 01:30-09:00`]);
-  });
-
-  it("only schedules the chosen nights of the week", async () => {
-    const weekday = (await rows("select public.jalali_weekday($1) as w", [addDays(today, 3)]))[0] as { w: number };
-    await save([weekday.w], "22:00", "06:00");
-    await fill(addDays(today, 20));
-    const nights = await rows("select distinct sleep_night::text as n from public.time_blocks order by 1");
-    expect(nights).toContainEqual({ n: addDays(today, 3) });
-    expect(nights).not.toContainEqual({ n: addDays(today, 4) });
-  });
-
-  it("keeps a deleted sleep block deleted", async () => {
     await save(EVERY_NIGHT, "23:00", "07:00");
-    await fill(today);
-    const n = addDays(today, 2);
-    await db.query("delete from public.time_blocks where sleep_night = $1", [n]);
-    await fill(addDays(today, 30));
-    expect(await night(n)).toEqual([]);
-  });
-
-  it("re-plans untouched future nights on a new schedule and keeps edited ones", async () => {
-    await save(EVERY_NIGHT, "23:00", "07:00");
-    await fill(today);
-    const edited = addDays(today, 2);
-    const untouched = addDays(today, 3);
-    // now() is fixed within the test's transaction, so backdate created_at to
-    // make the edit look later, as it is in real use
-    await db.query(
-      `update public.time_blocks set description = 'دیر خوابیدم', created_at = created_at - interval '1 minute'
-       where sleep_night = $1 and day = $1`,
-      [edited],
-    );
-    await save(EVERY_NIGHT, "22:00", "06:00");
-    await fill(today);
-    expect((await night(edited)).map((b) => b.span)).toEqual([
-      `${edited} 23:00-00:00`,
-      `${addDays(edited, 1)} 00:00-07:00`,
+    await save([1, 3], "22:30", "06:30");
+    expect(await rows("select weekday, bedtime::text, wake_time::text from public.sleep_schedules order by weekday")).toEqual([
+      { weekday: 1, bedtime: "22:30:00", wake_time: "06:30:00" },
+      { weekday: 3, bedtime: "22:30:00", wake_time: "06:30:00" },
     ]);
-    expect((await night(untouched)).map((b) => b.span)).toEqual([
-      `${untouched} 22:00-00:00`,
-      `${addDays(untouched, 1)} 00:00-06:00`,
-    ]);
+    // nothing is created or removed on the planner by the schedule itself
+    expect(await night("2026-10-13")).toHaveLength(2);
+    expect(await rows("select count(*)::int as n from public.time_blocks")).toEqual([{ n: 2 }]);
   });
 
-  it("removes upcoming untouched nights when turned off", async () => {
+  it("turns off with no nights", async () => {
     await save(EVERY_NIGHT, "23:00", "07:00");
-    await fill(today);
     await save([], "23:00", "07:00");
-    await fill(addDays(today, 30));
-    expect(await rows("select 1 from public.time_blocks where sleep_night > $1", [addDays(today, 1)])).toEqual([]);
+    expect(await rows("select 1 from public.sleep_schedules")).toEqual([]);
   });
 
   it("rejects nights shorter than an hour or longer than 16 hours", async () => {
@@ -178,11 +112,12 @@ describe("sleep schedule", () => {
     );
   });
 
-  it("keeps each user's schedule to themselves", async () => {
+  it("keeps each user's schedule and turned-down nights to themselves", async () => {
     await save(EVERY_NIGHT, "23:00", "07:00");
+    await db.query("insert into public.sleep_skips (user_id, night) values ($1, '2026-10-13')", [OWNER]);
+    await rejects("insert into public.sleep_skips (user_id, night) values ($1, '2026-10-13')", [OTHER], /row-level security/);
     await db.exec(`set local request.jwt.claim.sub = '${OTHER}'`);
     expect(await rows("select 1 from public.sleep_schedules")).toEqual([]);
-    expect(await rows("select 1 from public.sleep_settings")).toEqual([]);
-    expect(await fill(addDays(today, 3))).toBe(0);
+    expect(await rows("select 1 from public.sleep_skips")).toEqual([]);
   });
 });

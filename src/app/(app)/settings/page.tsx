@@ -63,7 +63,7 @@ export default async function SettingsPage() {
       <Card id="sleep">
         <CardHeader
           title="برنامهٔ خواب"
-          subtitle="ساعت خواب و بیداری هر شب را یک بار تنظیم کنید؛ در برنامهٔ روزانه خودکار چیده می‌شود."
+          subtitle="ساعت خواب و بیداری هر شب را یک بار تنظیم کنید؛ در برنامهٔ روزانه پیشنهاد می‌شود تا تأییدش کنید."
         />
         {sleep === null ? (
           <p role="alert" className="rounded-xl bg-down-soft px-3 py-2 text-sm text-down">

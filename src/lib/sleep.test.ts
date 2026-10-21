@@ -8,6 +8,7 @@ import {
   parseSleepForm,
   resolveNight,
   sleepMinutes,
+  sleepSuggestionsFor,
 } from "./sleep";
 
 // Tehran is UTC+03:30.
@@ -143,5 +144,36 @@ describe("resolveNight", () => {
     expect(
       resolveNight({ night, bedAt: at("2026-10-13T08:00:00"), wakeAt: at("2026-10-14T07:00:00") }, { existing: null, plan }),
     ).toEqual({ error: "خواب بیش از ۲۰ ساعت ثبت نمی‌شود." });
+  });
+});
+
+describe("sleepSuggestionsFor", () => {
+  // 2026-10-13 is a Tuesday (weekday 3), 2026-10-12 a Monday (2)
+  const plans = [
+    { weekday: 2, bedtime: 23 * 60, wake: 7 * 60 },
+    { weekday: 3, bedtime: 23 * 60 + 30, wake: 6 * 60 + 30 },
+  ];
+  const now = at("2026-10-13T10:00:00");
+
+  it("offers the night before and the night starting that evening", () => {
+    expect(sleepSuggestionsFor("2026-10-13", plans, new Set(), now)).toEqual([
+      { night: "2026-10-12", bedAt: at("2026-10-12T23:00:00").toISOString(), wakeAt: at("2026-10-13T07:00:00").toISOString() },
+      { night: "2026-10-13", bedAt: at("2026-10-13T23:30:00").toISOString(), wakeAt: at("2026-10-14T06:30:00").toISOString() },
+    ]);
+  });
+
+  it("leaves out settled nights, nights without a plan and long-past ones", () => {
+    expect(sleepSuggestionsFor("2026-10-13", plans, new Set(["2026-10-12"]), now).map((s) => s.night)).toEqual([
+      "2026-10-13",
+    ]);
+    expect(sleepSuggestionsFor("2026-10-15", plans, new Set(), now)).toEqual([]);
+    expect(sleepSuggestionsFor("2026-10-13", plans, new Set(), at("2026-10-15T10:00:00"))).toEqual([]);
+  });
+
+  it("skips a night that doesn't reach the day", () => {
+    // Monday night after midnight lies wholly on Tuesday, not Monday
+    const late = [{ weekday: 2, bedtime: 60, wake: 9 * 60 }];
+    expect(sleepSuggestionsFor("2026-10-12", late, new Set(), now)).toEqual([]);
+    expect(sleepSuggestionsFor("2026-10-13", late, new Set(), now).map((s) => s.night)).toEqual(["2026-10-12"]);
   });
 });

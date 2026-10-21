@@ -29,7 +29,7 @@ function nightSpan(weekday: number, bedtime: number, wake: number): string {
 }
 
 // The weekly sleep schedule: a bedtime and wake time per night, which the
-// planner turns into "خواب" blocks on its own.
+// planner offers as "خواب" suggestions to accept.
 export function SleepScheduleForm({ plans }: { plans: SleepPlan[] }) {
   const [state, action] = useActionState(saveSleepSchedule, initialFormState);
   // nothing saved yet: every night checked, so the first save is one click
@@ -113,8 +113,8 @@ export function SleepScheduleForm({ plans }: { plans: SleepPlan[] }) {
       </ul>
       <p className="text-xs leading-6 text-muted">
         «شنبه شب» یعنی شبی که عصر شنبه شروع می‌شود؛ ساعت خواب قبل از ظهر (مثلاً ۰۱:۰۰) بعد از نیمه‌شب حساب
-        می‌شود. هر شب به‌صورت جعبهٔ «خواب» با برچسب #خواب در برنامهٔ روزانه می‌آید و در گزارش ماهانه جمع
-        زده می‌شود. اگر جعبهٔ خواب یک شب را ویرایش یا حذف کنید، همان‌طور می‌ماند.
+        می‌شود. هر شب در برنامهٔ روزانه به‌صورت پیشنهاد «خواب» نشان داده می‌شود و فقط وقتی «ثبت» را بزنید
+        جعبهٔ خواب با برچسب #خواب ساخته می‌شود (و در گزارش ماهانه جمع زده می‌شود).
       </p>
       <div className="flex flex-wrap gap-2">
         <SubmitButton pendingText="در حال ذخیره…">ذخیرهٔ برنامهٔ خواب</SubmitButton>

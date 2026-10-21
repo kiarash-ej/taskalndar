@@ -2,7 +2,15 @@
 
 import { refresh } from "next/cache";
 import { getCurrentUser } from "../auth";
-import { clockOf, clockToInstant, formatClock, parseBlockForm, parseTagFields, type BlockFields } from "../blocks";
+import {
+  clockOf,
+  clockToInstant,
+  formatClock,
+  MINUTES_PER_DAY,
+  parseBlockForm,
+  parseTagFields,
+  type BlockFields,
+} from "../blocks";
 import { isIsoDate } from "../dates";
 import { formValues, GENERIC_ERROR, type FormState } from "../form-state";
 import { parseBlockReminder, type BlockReminder } from "../reminders";
@@ -76,7 +84,58 @@ export async function updateBlock(
 
 export async function deleteBlock(blockId: string): Promise<{ error?: string }> {
   const supabase = await createClient();
-  const { error } = await supabase.from("time_blocks").delete().eq("id", blockId);
+  const { data, error } = await supabase.from("time_blocks").delete().eq("id", blockId).select("user_id, sleep_night");
+  if (error) return { error: GENERIC_ERROR };
+  // a deleted sleep night isn't suggested again
+  const night = data?.[0];
+  if (night?.sleep_night) {
+    await supabase
+      .from("sleep_skips")
+      .upsert({ user_id: night.user_id, night: night.sleep_night }, { onConflict: "user_id,night", ignoreDuplicates: true });
+  }
+  refresh();
+  return {};
+}
+
+export interface SuggestedBlock {
+  title: string;
+  // minutes since the day's Tehran midnight
+  start: number;
+  end: number;
+}
+
+const MAX_SUGGESTED = 50;
+
+// Saves the task-arrangement suggestions the user accepted as time blocks.
+export async function addSuggestedBlocks(day: string, items: SuggestedBlock[]): Promise<{ error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { error: SIGNED_OUT };
+  if (!isIsoDate(day) || !Array.isArray(items) || items.length === 0 || items.length > MAX_SUGGESTED) {
+    return { error: GENERIC_ERROR };
+  }
+  const valid = items.every(
+    (i) =>
+      typeof i.title === "string" &&
+      i.title.trim().length > 0 &&
+      i.title.trim().length <= 200 &&
+      Number.isInteger(i.start) &&
+      Number.isInteger(i.end) &&
+      i.start >= 0 &&
+      i.end > i.start &&
+      i.end <= MINUTES_PER_DAY,
+  );
+  if (!valid) return { error: GENERIC_ERROR };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("time_blocks").insert(
+    items.map((i) => ({
+      user_id: user.id,
+      day,
+      start_at: clockToInstant(day, i.start),
+      end_at: clockToInstant(day, i.end),
+      title: i.title.trim(),
+    })),
+  );
   if (error) return { error: GENERIC_ERROR };
   refresh();
   return {};

@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../auth", () => ({ getCurrentUser: mocks.user }));
 vi.mock("../supabase/server", () => ({ createClient: mocks.client }));
 vi.mock("next/cache", () => ({ refresh: vi.fn() }));
-import { applyTemplate, createBlock, saveDayAsTemplate } from "./blocks";
+import { addSuggestedBlocks, applyTemplate, createBlock, saveDayAsTemplate } from "./blocks";
 import { addTemplateBlock } from "./templates";
 
 const DAY = "2026-10-15";
@@ -35,7 +35,12 @@ beforeEach(() => {
   read.eq.mockReturnValue(read);
   read.neq.mockReturnValue(read);
   mocks.client.mockResolvedValue({
-    from: vi.fn(() => ({ ...read, insert: mocks.insert, delete: () => ({ eq: mocks.deleteEq }) })),
+    from: vi.fn(() => ({ ...read, insert: mocks.insert, delete: () => ({
+      eq: (...args: unknown[]) =>
+        Object.assign(Promise.resolve(mocks.deleteEq(...args)), {
+          select: () => Promise.resolve({ data: [], error: null }),
+        }),
+    }) })),
     rpc: mocks.rpc,
   });
 });
@@ -123,5 +128,27 @@ describe("templates", () => {
     expect(mocks.insert).toHaveBeenCalledWith({
       template_id: "tpl", user_id: "owner", start_time: "06:00", end_time: "07:00", title: "ورزش", tags: ["ورزش"],
     });
+  });
+});
+
+describe("addSuggestedBlocks", () => {
+  it("saves the accepted suggestions as blocks", async () => {
+    expect(await addSuggestedBlocks(DAY, [{ title: " خرید ", start: 9 * 60, end: 9 * 60 + 30 }])).toEqual({});
+    expect(mocks.insert).toHaveBeenCalledWith([
+      {
+        user_id: "owner",
+        day: DAY,
+        start_at: "2026-10-15T05:30:00.000Z",
+        end_at: "2026-10-15T06:00:00.000Z",
+        title: "خرید",
+      },
+    ]);
+  });
+
+  it("refuses anything that isn't a block of that day", async () => {
+    for (const items of [[], [{ title: "", start: 0, end: 30 }], [{ title: "x", start: 1400, end: 1500 }], [{ title: "x", start: 30, end: 30 }]]) {
+      expect((await addSuggestedBlocks(DAY, items)).error).toBeDefined();
+    }
+    expect(mocks.insert).not.toHaveBeenCalled();
   });
 });

@@ -1,9 +1,9 @@
 import { clockOf, clockToInstant, formatClock, MINUTES_PER_DAY, parseClock } from "./blocks";
-import { addDays, calendarDateOf, type IsoDate } from "./dates";
+import { addDays, calendarDateOf, weekdayIndex, type IsoDate } from "./dates";
 import { faDigits, WEEKDAY_NAMES } from "./format";
 
 // The sleep schedule (supabase/migrations/*_sleep_schedule.sql): a bedtime and
-// wake time per night of the week. A night is named by the day of its evening
+// wake time per night of the week, which the planner offers as suggestions. A night is named by the day of its evening
 // ("شنبه شب"); a bedtime from 12:00 is on that day, an earlier one after its
 // midnight, and waking is the first wake time after going to bed.
 
@@ -65,6 +65,42 @@ export function parseSleepForm(formData: FormData): SleepPlan[] | { error: strin
     plans.push({ weekday, bedtime, wake });
   }
   return plans;
+}
+
+// When a night with this plan begins and ends.
+export function plannedNight(night: IsoDate, plan: { bedtime: number; wake: number }): { bedAt: Date; wakeAt: Date } {
+  const bedAt = nightStart(night, plan.bedtime);
+  return { bedAt, wakeAt: new Date(bedAt.getTime() + sleepMinutes(plan.bedtime, plan.wake) * MS_PER_MINUTE) };
+}
+
+export interface SleepSuggestion {
+  night: IsoDate;
+  // ISO timestamps, so the suggestion can go to the browser as is
+  bedAt: string;
+  wakeAt: string;
+}
+
+// The schedule's suggestions for the nights that touch `day` (the one from
+// the evening before and the one starting that evening), leaving out nights
+// already on the planner or turned down, and nights over for a day or more.
+export function sleepSuggestionsFor(
+  day: IsoDate,
+  plans: SleepPlan[],
+  settled: Set<IsoDate>,
+  now: Date,
+): SleepSuggestion[] {
+  const dayStart = Date.parse(clockToInstant(day, 0));
+  const dayEnd = Date.parse(clockToInstant(day, MINUTES_PER_DAY));
+  const suggestions: SleepSuggestion[] = [];
+  for (const night of [addDays(day, -1), day]) {
+    const plan = plans.find((p) => p.weekday === weekdayIndex(night));
+    if (!plan || settled.has(night)) continue;
+    const { bedAt, wakeAt } = plannedNight(night, plan);
+    if (wakeAt.getTime() <= dayStart || bedAt.getTime() >= dayEnd) continue;
+    if (wakeAt.getTime() < now.getTime() - MINUTES_PER_DAY * MS_PER_MINUTE) continue;
+    suggestions.push({ night, bedAt: bedAt.toISOString(), wakeAt: wakeAt.toISOString() });
+  }
+  return suggestions;
 }
 
 // --- the phone link (src/app/api/sleep) ---
@@ -153,7 +189,7 @@ export function resolveNight(
   anchor: { night: IsoDate; bedAt?: Date; wakeAt?: Date },
   { existing, plan }: NightContext,
 ): { bedAt: Date; wakeAt: Date } | { error: string } {
-  const bedAt = anchor.bedAt ?? existing?.bedAt ?? (plan ? nightStart(anchor.night, plan.bedtime) : undefined);
+  const bedAt = anchor.bedAt ?? existing?.bedAt ?? (plan ? plannedNight(anchor.night, plan).bedAt : undefined);
   if (!bedAt) return { error: "ساعت خواب مشخص نیست: آن را هم بفرستید یا در تنظیمات برنامهٔ خواب بسازید." };
   let wakeAt = anchor.wakeAt;
   if (!wakeAt && existing && existing.wakeAt > bedAt) wakeAt = existing.wakeAt;
