@@ -418,6 +418,7 @@ export type Database = {
           date: string
           id: string
           is_recurring: boolean
+          replaced_by: string | null
           title: string
           user_id: string
           weekdays: number[] | null
@@ -428,6 +429,7 @@ export type Database = {
           date?: string
           id?: string
           is_recurring?: boolean
+          replaced_by?: string | null
           title: string
           user_id: string
           weekdays?: number[] | null
@@ -438,6 +440,7 @@ export type Database = {
           date?: string
           id?: string
           is_recurring?: boolean
+          replaced_by?: string | null
           title?: string
           user_id?: string
           weekdays?: number[] | null
@@ -556,6 +559,8 @@ export type Database = {
           user_id: string
         }[]
       }
+      delete_future_task_chain: { Args: { p_task_id: string }; Returns: undefined }
+      delete_task: { Args: { p_task_id: string }; Returns: string }
       jalali_weekday: { Args: { d: string }; Returns: number }
       link_notification_channel: {
         Args: { p_chat_id: string; p_code: string; p_kind: string }

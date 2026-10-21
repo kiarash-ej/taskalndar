@@ -18,10 +18,16 @@ beforeEach(() => {
 });
 
 describe("task schedule actions", () => {
-  it("leaves an archived historical schedule’s cutoff unchanged on repeated deletion", async () => {
-    mocks.single.mockResolvedValue({ data: { is_recurring: true, date: "2026-09-01", archived_at: "2026-09-20T08:00:00Z" } });
+  it("deletes through the delete_task RPC, which decides between removing, archiving and leaving history", async () => {
+    mocks.rpc.mockResolvedValue({ data: "unchanged", error: null });
     expect(await deleteTask("old-version")).toEqual({});
+    expect(mocks.rpc).toHaveBeenCalledWith("delete_task", { p_task_id: "old-version" });
     expect(mocks.update).not.toHaveBeenCalled();
+  });
+
+  it("reports a failed deletion instead of success", async () => {
+    mocks.rpc.mockResolvedValue({ data: null, error: { message: "Task not found" } });
+    expect((await deleteTask("task")).error).toBeDefined();
   });
 
   it("uses the atomic schedule RPC for recurrence changes", async () => {

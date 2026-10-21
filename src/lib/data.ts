@@ -3,6 +3,7 @@ import type { ChannelRow } from "./channels";
 import type { Tables } from "./database.types";
 import { addDays, type IsoDate } from "./dates";
 import { DEFAULT_REMINDER_SETTINGS, type ReminderSettings } from "./reminders";
+import { selectAll } from "./paginate";
 import type { BlockRow } from "./report";
 import type { ProgressData } from "./scoring";
 import { sleepSuggestionsFor, type SleepPlan, type SleepSuggestion } from "./sleep";
@@ -13,6 +14,7 @@ import { createClient } from "./supabase/server";
 
 // All of the user's tasks and goals (archived ones too: they still count for
 // the days they were active), plus completions and goal logs between from..to.
+// Every query is read in full (selectAll); each order ends in the unique id.
 export async function loadProgressData(
   userId: string,
   from: IsoDate,
@@ -20,40 +22,48 @@ export async function loadProgressData(
 ): Promise<ProgressData> {
   const supabase = await createClient();
   const [tasks, completions, goals, goalLogs] = await Promise.all([
-    supabase
-      .from("tasks")
-      .select("id, title, is_recurring, date, weekdays, archived_at")
-      .eq("user_id", userId)
-      .order("created_at"),
-    supabase
-      .from("task_completions")
-      .select("task_id, date, done")
-      .eq("user_id", userId)
-      .gte("date", from)
-      .lte("date", to),
-    supabase
-      .from("goals")
-      .select("id, title, target_value, unit, period, start_date, created_at, archived_at")
-      .eq("user_id", userId)
-      .order("created_at"),
-    supabase
-      .from("goal_logs")
-      .select("id, goal_id, date, amount")
-      .eq("user_id", userId)
-      .gte("date", from)
-      .lte("date", to)
-      .order("date", { ascending: false }),
+    selectAll((start, end) =>
+      supabase
+        .from("tasks")
+        .select("id, title, is_recurring, date, weekdays, archived_at", { count: "exact" })
+        .eq("user_id", userId)
+        .order("created_at")
+        .order("id")
+        .range(start, end),
+    ),
+    selectAll((start, end) =>
+      supabase
+        .from("task_completions")
+        .select("task_id, date, done", { count: "exact" })
+        .eq("user_id", userId)
+        .gte("date", from)
+        .lte("date", to)
+        .order("date")
+        .order("id")
+        .range(start, end),
+    ),
+    selectAll((start, end) =>
+      supabase
+        .from("goals")
+        .select("id, title, target_value, unit, period, start_date, created_at, archived_at", { count: "exact" })
+        .eq("user_id", userId)
+        .order("created_at")
+        .order("id")
+        .range(start, end),
+    ),
+    selectAll((start, end) =>
+      supabase
+        .from("goal_logs")
+        .select("id, goal_id, date, amount", { count: "exact" })
+        .eq("user_id", userId)
+        .gte("date", from)
+        .lte("date", to)
+        .order("date", { ascending: false })
+        .order("id", { ascending: false })
+        .range(start, end),
+    ),
   ]);
-
-  for (const result of [tasks, completions, goals, goalLogs]) {
-    if (result.error) throw new Error(result.error.message);
-  }
-  return {
-    tasks: tasks.data ?? [],
-    completions: completions.data ?? [],
-    goals: goals.data ?? [],
-    goalLogs: goalLogs.data ?? [],
-  };
+  return { tasks, completions, goals, goalLogs };
 }
 
 // The user's note for one day: "" when none was written yet, null when the
@@ -75,15 +85,21 @@ export async function loadDailyNote(userId: string, day: IsoDate): Promise<strin
 // the input of the monthly report (filterBlocks).
 export async function loadTimeBlocks(userId: string, from: IsoDate, to: IsoDate): Promise<BlockRow[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("time_blocks")
-    .select("id, day, start_at, end_at, title, description, tags, amount, unit, cost, done, source, remind, reminder_minutes")
-    .eq("user_id", userId)
-    .gte("day", from)
-    .lte("day", to)
-    .order("start_at");
-  if (error) throw new Error(error.message);
-  return data;
+  // a month of blocks can pass one response page too
+  return selectAll((start, end) =>
+    supabase
+      .from("time_blocks")
+      .select(
+        "id, day, start_at, end_at, title, description, tags, amount, unit, cost, done, source, remind, reminder_minutes",
+        { count: "exact" },
+      )
+      .eq("user_id", userId)
+      .gte("day", from)
+      .lte("day", to)
+      .order("start_at")
+      .order("id")
+      .range(start, end),
+  );
 }
 
 export type TemplateBlockRow = Pick<
