@@ -67,3 +67,16 @@ export const Bell = (p: SVGProps<SVGSVGElement>) => (
     <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0" />
   </Icon>
 );
+
+export const Sun = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+  </Icon>
+);
+
+export const Monitor = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <path d="M3 5h18v11H3zM9 20h6M12 16v4" />
+  </Icon>
+);

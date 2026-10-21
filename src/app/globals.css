@@ -14,10 +14,14 @@
   --up-soft: #dcfce7;
   --down: #be123c;
   --down-soft: #ffe4e6;
+  /* native controls (time pickers, scrollbars) follow the theme too */
+  color-scheme: light;
 }
 
+/* Dark: chosen in the app (data-theme="dark", src/lib/theme.ts), or the
+   device's preference while the user hasn't picked light or dark. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #141412;
     --surface: #1d1d1a;
     --surface-2: #26261f;
@@ -31,7 +35,25 @@
     --up-soft: #14301f;
     --down: #fb7185;
     --down-soft: #3b1720;
+    color-scheme: dark;
   }
+}
+
+:root[data-theme="dark"] {
+  --bg: #141412;
+  --surface: #1d1d1a;
+  --surface-2: #26261f;
+  --line: #33322c;
+  --fg: #ecebe6;
+  --muted: #a3a097;
+  --accent: #2dd4bf;
+  --accent-fg: #062b27;
+  --accent-soft: #123b36;
+  --up: #4ade80;
+  --up-soft: #14301f;
+  --down: #fb7185;
+  --down-soft: #3b1720;
+  color-scheme: dark;
 }
 
 @theme inline {

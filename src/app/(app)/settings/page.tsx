@@ -3,6 +3,7 @@ import { BackgroundForm } from "@/components/background-form";
 import { ChannelPanel, type ChannelView } from "@/components/channel-settings";
 import { ReminderSettingsForm } from "@/components/reminder-settings";
 import { SleepPhoneLink, SleepScheduleForm } from "@/components/sleep-settings";
+import { ThemePicker } from "@/components/theme-toggle";
 import { Card, CardHeader, PageHeader } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { channelState } from "@/lib/channels";
@@ -10,16 +11,18 @@ import { loadChannels, loadReminderSettings, loadSleepSettings } from "@/lib/dat
 import { BOT_KINDS } from "@/lib/messaging/bots";
 import { botTokens, botUsernames } from "@/lib/messaging/config";
 import { loadBackground } from "@/lib/profile";
+import { loadTheme } from "@/lib/theme-server";
 
 export const metadata: Metadata = { title: "تنظیمات" };
 
 export default async function SettingsPage() {
   const user = await requireUser();
-  const [{ background }, channels, sleep, reminders] = await Promise.all([
+  const [{ background }, channels, sleep, reminders, theme] = await Promise.all([
     loadBackground(user.id),
     loadChannels(user.id),
     loadSleepSettings(user.id),
     loadReminderSettings(user.id),
+    loadTheme(),
   ]);
 
   // Only messengers whose bot is configured on this server are offered.
@@ -41,6 +44,14 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-4">
       <PageHeader title="تنظیمات" subtitle="ظاهر برنامه، یادآوری‌ها، برنامهٔ خواب و خلاصهٔ روزانه را به سلیقهٔ خودتان تنظیم کنید." />
+      <Card>
+        <CardHeader
+          title="حالت نمایش"
+          subtitle="روشن یا تیره؛ با «مثل دستگاه» از تنظیم گوشی یا کامپیوترتان پیروی می‌کند."
+        />
+        <ThemePicker initial={theme} />
+      </Card>
+
       <Card>
         <CardHeader title="پس‌زمینه" subtitle="یک رنگ، گرادیان یا تصویر شخصی انتخاب کنید." />
         <BackgroundForm current={background} />
