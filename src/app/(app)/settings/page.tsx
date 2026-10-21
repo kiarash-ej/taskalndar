@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { BackgroundForm } from "@/components/background-form";
 import { ChannelPanel, type ChannelView } from "@/components/channel-settings";
 import { ReminderSettingsForm } from "@/components/reminder-settings";
 import { SleepPhoneLink, SleepScheduleForm } from "@/components/sleep-settings";
+import { ShareProfile } from "@/components/share-panel";
 import { ThemePicker } from "@/components/theme-toggle";
 import { Card, CardHeader, PageHeader } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { channelState } from "@/lib/channels";
-import { loadChannels, loadReminderSettings, loadSleepSettings } from "@/lib/data";
+import { loadChannels, loadReminderSettings, loadShareable, loadSleepSettings } from "@/lib/data";
 import { BOT_KINDS } from "@/lib/messaging/bots";
 import { botTokens, botUsernames } from "@/lib/messaging/config";
 import { loadBackground } from "@/lib/profile";
@@ -17,12 +19,13 @@ export const metadata: Metadata = { title: "تنظیمات" };
 
 export default async function SettingsPage() {
   const user = await requireUser();
-  const [{ background }, channels, sleep, reminders, theme] = await Promise.all([
+  const [{ background }, channels, sleep, reminders, theme, shareable] = await Promise.all([
     loadBackground(user.id),
     loadChannels(user.id),
     loadSleepSettings(user.id),
     loadReminderSettings(user.id),
     loadTheme(),
+    loadShareable(user.id),
   ]);
 
   // Only messengers whose bot is configured on this server are offered.
@@ -94,6 +97,25 @@ export default async function SettingsPage() {
           hasLink={sleep?.hasPhoneLink ?? false}
           available={!!process.env.SUPABASE_SERVICE_ROLE_KEY}
         />
+      </Card>
+
+      <Card id="share">
+        <CardHeader
+          title="اشتراک‌گذاری پروفایل"
+          subtitle="تمپلیت‌ها، برنامهٔ خواب و کارهای تکراری‌تان را با یک لینک برای کسی بفرستید."
+          aside={
+            <Link href="/import" className="shrink-0 text-sm font-semibold text-accent hover:underline">
+              دریافت از کد ←
+            </Link>
+          }
+        />
+        {shareable === null ? (
+          <p role="alert" className="rounded-xl bg-down-soft px-3 py-2 text-sm text-down">
+            اطلاعات اشتراک‌گذاری بارگذاری نشد. صفحه را دوباره باز کنید.
+          </p>
+        ) : (
+          <ShareProfile pack={shareable} />
+        )}
       </Card>
 
       <Card>

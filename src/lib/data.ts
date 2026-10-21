@@ -1,4 +1,4 @@
-import { minutesOfTime } from "./blocks";
+import { formatClock, minutesOfTime } from "./blocks";
 import type { ChannelRow } from "./channels";
 import type { Tables } from "./database.types";
 import { addDays, type IsoDate } from "./dates";
@@ -6,6 +6,7 @@ import { DEFAULT_REMINDER_SETTINGS, type ReminderSettings } from "./reminders";
 import { selectAll } from "./paginate";
 import type { BlockRow } from "./report";
 import type { ProgressData } from "./scoring";
+import type { SharePack } from "./share";
 import { sleepSuggestionsFor, type SleepPlan, type SleepSuggestion } from "./sleep";
 import { createClient } from "./supabase/server";
 
@@ -230,5 +231,42 @@ export async function loadReminderSettings(userId: string): Promise<ReminderSett
       ? { enabled: row.enabled, leadMinutes: row.lead_minutes, includeSleep: row.include_sleep }
       : DEFAULT_REMINDER_SETTINGS),
     hasChat: chats.data.length > 0,
+  };
+}
+
+// The user's reusable setup, for sharing (src/lib/share.ts): templates, the
+// weekly sleep schedule and the repeating tasks still in use. Never personal
+// records. null when it couldn't be read.
+export async function loadShareable(userId: string): Promise<SharePack | null> {
+  const supabase = await createClient();
+  const [templates, plans, tasks] = await Promise.all([
+    loadTemplates(userId).catch(() => null),
+    loadSleepPlans(userId),
+    supabase
+      .from("tasks")
+      .select("title, weekdays, archived_at")
+      .eq("user_id", userId)
+      .eq("is_recurring", true)
+      .order("created_at"),
+  ]);
+  if (!templates || !plans || tasks.error) return null;
+  const now = Date.now();
+  return {
+    v: 1,
+    templates: templates.map((t) => ({
+      name: t.name,
+      blocks: t.blocks.map((b) => ({
+        start: formatClock(minutesOfTime(b.start_time)),
+        end: formatClock(minutesOfTime(b.end_time)),
+        title: b.title,
+        tags: b.tags,
+      })),
+    })),
+    sleep: plans.map((p) => ({ weekday: p.weekday, bed: formatClock(p.bedtime), wake: formatClock(p.wake) })),
+    // still running, one entry per title (a rescheduled task has one row per version)
+    tasks: tasks.data
+      .filter((t) => t.archived_at === null || Date.parse(t.archived_at) > now)
+      .filter((t, i, all) => all.findIndex((o) => o.title === t.title) === i)
+      .map((t) => ({ title: t.title, weekdays: t.weekdays })),
   };
 }

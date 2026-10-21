@@ -8,13 +8,35 @@ import {
   deleteTemplateBlock,
   renameTemplate,
 } from "@/lib/actions/templates";
-import { formatClockRange, minutesOfTime } from "@/lib/blocks";
+import { formatClock, formatClockRange, minutesOfTime } from "@/lib/blocks";
 import type { DayTemplate } from "@/lib/data";
 import { initialFormState, type FormState } from "@/lib/form-state";
+import type { SharePack } from "@/lib/share";
 import { Pencil, Trash } from "./icons";
+import { ShareTemplateButton } from "./share-panel";
 import { SubmitButton } from "./submit-button";
 import { TagInput } from "./tag-input";
 import { buttonClass, Card, CardHeader, cx, Field, FormMessage, iconButtonClass, inputClass } from "./ui";
+
+// One template as a share code (src/lib/share.ts).
+function templatePack(template: DayTemplate): SharePack {
+  return {
+    v: 1,
+    templates: [
+      {
+        name: template.name,
+        blocks: template.blocks.map((b) => ({
+          start: formatClock(minutesOfTime(b.start_time)),
+          end: formatClock(minutesOfTime(b.end_time)),
+          title: b.title,
+          tags: b.tags,
+        })),
+      },
+    ],
+    sleep: [],
+    tasks: [],
+  };
+}
 
 export function NewTemplateForm() {
   const [state, action] = useActionState(createTemplate, initialFormState);
@@ -127,6 +149,12 @@ export function TemplateCard({ template, suggestions }: { template: DayTemplate;
           <TemplateBlockForm templateId={template.id} suggestions={suggestions} />
         </div>
       </details>
+
+      {template.blocks.length > 0 && (
+        <div className="mt-3 border-t border-line pt-3">
+          <ShareTemplateButton pack={templatePack(template)} name={template.name} />
+        </div>
+      )}
     </Card>
   );
 }
