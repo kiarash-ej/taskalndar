@@ -16,8 +16,9 @@ export interface ReminderSettings {
   includeSleep: boolean;
 }
 
+// no settings saved yet: off until the user turns reminders on
 export const DEFAULT_REMINDER_SETTINGS: ReminderSettings = {
-  enabled: true,
+  enabled: false,
   leadMinutes: DEFAULT_LEAD_MINUTES,
   includeSleep: true,
 };

@@ -76,8 +76,8 @@ export default async function SettingsPage() {
 
       <Card>
         <CardHeader
-          title="ثبت خودکار خواب از گوشی"
-          subtitle="وقتی زنگ ساعت گوشی را تنظیم می‌کنید یا می‌خوابید، ساعت خواب و بیداری خودش ثبت شود."
+          title="پیشنهاد خواب از گوشی"
+          subtitle="وقتی زنگ ساعت گوشی را تنظیم می‌کنید یا می‌خوابید، ساعت‌ها فرستاده شود و برای ثبت از شما پرسیده شود."
         />
         <SleepPhoneLink
           hasLink={sleep?.hasPhoneLink ?? false}

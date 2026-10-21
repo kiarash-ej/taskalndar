@@ -166,22 +166,29 @@ export async function loadSleepSettings(userId: string): Promise<SleepSettingsVi
   return { plans, hasPhoneLink: !!settings.data?.hook_token_hash };
 }
 
-// What the sleep schedule suggests for the nights touching `day` that aren't
-// on the planner or turned down yet. A failure just means no suggestions.
+// The sleep nights to ask the user about on `day`: the phone's proposals and
+// the schedule's suggestions. A failure just means no questions.
 export async function loadSleepSuggestions(userId: string, day: IsoDate): Promise<SleepSuggestion[]> {
   const supabase = await createClient();
   const nights = [addDays(day, -1), day];
-  const [plans, blocks, skips] = await Promise.all([
+  const [plans, blocks, skips, proposals] = await Promise.all([
     loadSleepPlans(userId),
     supabase.from("time_blocks").select("sleep_night").eq("user_id", userId).in("sleep_night", nights),
     supabase.from("sleep_skips").select("night").eq("user_id", userId).in("night", nights),
+    supabase.from("sleep_proposals").select("night, bed_at, wake_at").eq("user_id", userId).in("night", nights),
   ]);
-  if (!plans || blocks.error || skips.error) return [];
+  if (!plans || blocks.error || skips.error || proposals.error) return [];
   const settled = new Set([
     ...blocks.data.map((b) => b.sleep_night).filter((n): n is string => n !== null),
     ...skips.data.map((s) => s.night),
   ]);
-  return sleepSuggestionsFor(day, plans, settled, new Date());
+  return sleepSuggestionsFor(
+    day,
+    plans,
+    settled,
+    new Date(),
+    proposals.data.map((p) => ({ night: p.night, bedAt: p.bed_at, wakeAt: p.wake_at })),
+  );
 }
 
 export interface ReminderSettingsView extends ReminderSettings {

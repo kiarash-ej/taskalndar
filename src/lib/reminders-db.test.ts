@@ -17,7 +17,7 @@ beforeEach(async () => {
      values ($1, 'bale', '42', now(), null, null)`,
     [OWNER],
   );
-  await db.query("insert into public.reminder_settings (user_id, lead_minutes) values ($1, 10)", [OWNER]);
+  await db.query("insert into public.reminder_settings (user_id, enabled, lead_minutes) values ($1, true, 10)", [OWNER]);
 });
 afterEach(async () => { await db.exec("rollback"); });
 
@@ -99,6 +99,13 @@ describe("claim_due_reminders", () => {
     expect(await claim()).toEqual([expect.objectContaining({ title: "خواب", is_sleep: true })]);
     await db.query("update public.time_blocks set reminded_at = null");
     await db.query("update public.reminder_settings set include_sleep = false");
+    expect(await claim()).toEqual([]);
+  });
+
+  it("sends nothing until the user turns reminders on", async () => {
+    await db.query("delete from public.reminder_settings");
+    await db.query("insert into public.reminder_settings (user_id) values ($1)", [OWNER]);
+    await block(5);
     expect(await claim()).toEqual([]);
   });
 

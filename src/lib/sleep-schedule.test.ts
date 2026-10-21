@@ -76,6 +76,12 @@ describe("set_sleep_night", () => {
 });
 
 describe("sleep schedule", () => {
+  it("rejects a backwards or overlong phone proposal", async () => {
+    const insert = "insert into public.sleep_proposals (user_id, night, bed_at, wake_at) values ($1, '2026-10-13', $2, $3)";
+    await rejects(insert, [OWNER, "2026-10-14T07:00:00+03:30", "2026-10-13T23:00:00+03:30"], /sleep_proposals_length_check/);
+    await rejects(insert, [OWNER, "2026-10-13T08:00:00+03:30", "2026-10-14T07:00:00+03:30"], /sleep_proposals_length_check/);
+  });
+
   it("replaces the weekly schedule and leaves blocks alone", async () => {
     await db.query("select public.set_sleep_night($1, $2, $3, $4)", [
       OWNER, "2026-10-13", "2026-10-13T23:00:00+03:30", "2026-10-14T07:00:00+03:30",
@@ -112,12 +118,17 @@ describe("sleep schedule", () => {
     );
   });
 
-  it("keeps each user's schedule and turned-down nights to themselves", async () => {
+  it("keeps each user's schedule, turned-down nights and phone proposals to themselves", async () => {
     await save(EVERY_NIGHT, "23:00", "07:00");
     await db.query("insert into public.sleep_skips (user_id, night) values ($1, '2026-10-13')", [OWNER]);
     await rejects("insert into public.sleep_skips (user_id, night) values ($1, '2026-10-13')", [OTHER], /row-level security/);
+    await db.query(
+      "insert into public.sleep_proposals (user_id, night, bed_at, wake_at) values ($1, '2026-10-13', $2, $3)",
+      [OWNER, "2026-10-13T23:00:00+03:30", "2026-10-14T07:00:00+03:30"],
+    );
     await db.exec(`set local request.jwt.claim.sub = '${OTHER}'`);
     expect(await rows("select 1 from public.sleep_schedules")).toEqual([]);
     expect(await rows("select 1 from public.sleep_skips")).toEqual([]);
+    expect(await rows("select 1 from public.sleep_proposals")).toEqual([]);
   });
 });

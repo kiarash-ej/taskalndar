@@ -1,7 +1,9 @@
 -- Sleep schedule: the user's bedtime and wake time for each night of the week.
 -- The planner suggests a "خواب" block for each night from it and creates the
 -- blocks only when the user accepts (set_sleep_night). A personal link lets a
--- phone automation set a night when an alarm is set (src/app/api/sleep).
+-- phone automation propose a night when an alarm is set (src/app/api/sleep);
+-- that too waits for the user's answer on the planner. Nothing is written to
+-- the planner without the user saying yes.
 --
 -- A night is named by the day its evening falls on, the way people say it
 -- ("شنبه شب ساعت ۱ می‌خوابم" is the night starting Saturday evening, even
@@ -76,6 +78,24 @@ create policy "sleep_skips_owner_all" on public.sleep_skips
   using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
 
+-- A night the phone proposed, waiting for the user to accept or turn it down.
+-- One per night; a newer call replaces it.
+create table public.sleep_proposals (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  night date not null,
+  bed_at timestamptz not null,
+  wake_at timestamptz not null,
+  created_at timestamptz not null default now(),
+  primary key (user_id, night),
+  constraint sleep_proposals_length_check check (wake_at > bed_at and wake_at - bed_at <= interval '20 hours')
+);
+
+alter table public.sleep_proposals enable row level security;
+create policy "sleep_proposals_owner_all" on public.sleep_proposals
+  for all
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
 -- Sleep blocks are time blocks with source 'sleep' that remember their night.
 alter table public.time_blocks drop constraint time_blocks_source_check;
 alter table public.time_blocks add constraint time_blocks_source_check
@@ -87,8 +107,8 @@ create index time_blocks_user_sleep_night_idx on public.time_blocks (user_id, sl
   where sleep_night is not null;
 
 -- Replaces the night's sleep blocks with [p_bed_at, p_wake_at), one block per
--- Tehran day it touches. Authenticated callers only reach their own rows (RLS);
--- the phone link calls it with the service role for the link's owner.
+-- Tehran day it touches. Called when the user accepts a night; authenticated
+-- callers only reach their own rows (RLS).
 create function public.set_sleep_night(p_user uuid, p_night date, p_bed_at timestamptz, p_wake_at timestamptz)
 returns void
 language plpgsql
@@ -149,6 +169,6 @@ $$;
 
 -- Supabase grants anon execute directly, so revoking from public is not enough.
 revoke all on function public.set_sleep_night(uuid, date, timestamptz, timestamptz) from public, anon;
-grant execute on function public.set_sleep_night(uuid, date, timestamptz, timestamptz) to authenticated, service_role;
+grant execute on function public.set_sleep_night(uuid, date, timestamptz, timestamptz) to authenticated;
 revoke all on function public.save_sleep_schedule(smallint[], time[], time[]) from public, anon;
 grant execute on function public.save_sleep_schedule(smallint[], time[], time[]) to authenticated;

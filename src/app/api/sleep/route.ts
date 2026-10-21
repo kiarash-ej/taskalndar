@@ -6,8 +6,9 @@ import { bearerToken, hashHookToken, readHookParams } from "@/lib/sleep-hook";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // The phone link: a phone automation (iPhone Shortcuts, Tasker, MacroDroid…)
-// calls it when an alarm is set, at bedtime or on waking, and that night's
-// sleep block on the planner is set to match.
+// calls it when an alarm is set, at bedtime or on waking. It only proposes
+// that night's sleep: the planner asks the user, who accepts, changes the
+// times or turns it down. Nothing reaches the planner without that answer.
 //
 //   POST /api/sleep?token=<secret>&wake=07:00            alarm set for 07:00
 //   POST /api/sleep?token=<secret>&bed=23:30&wake=07:00  both
@@ -16,7 +17,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 //
 // Values may also come as a JSON or form body; the secret also as
 // "Authorization: Bearer <secret>". A missing side is taken from the night's
-// blocks already on the planner, then from the weekly schedule.
+// earlier proposal or blocks already on the planner, then from the weekly schedule.
 
 function reply(status: number, message: string, extra: Record<string, unknown> = {}) {
   return Response.json({ ok: status === 200, message, ...extra }, { status });
@@ -44,7 +45,13 @@ export async function POST(request: NextRequest) {
 
   const anchor = anchorNight(bed, wake, new Date());
   const userId = owner.user_id;
-  const [blocks, plan] = await Promise.all([
+  const [proposal, blocks, plan] = await Promise.all([
+    supabase
+      .from("sleep_proposals")
+      .select("bed_at, wake_at")
+      .eq("user_id", userId)
+      .eq("night", anchor.night)
+      .maybeSingle(),
     supabase.from("time_blocks").select("start_at, end_at").eq("user_id", userId).eq("sleep_night", anchor.night),
     supabase
       .from("sleep_schedules")
@@ -53,30 +60,37 @@ export async function POST(request: NextRequest) {
       .eq("weekday", weekdayIndex(anchor.night))
       .maybeSingle(),
   ]);
+  if (proposal.error) throw new Error(proposal.error.message);
   if (blocks.error) throw new Error(blocks.error.message);
   if (plan.error) throw new Error(plan.error.message);
 
   const starts = blocks.data.map((b) => Date.parse(b.start_at));
   const ends = blocks.data.map((b) => Date.parse(b.end_at));
   const resolved = resolveNight(anchor, {
-    existing: blocks.data.length
-      ? { bedAt: new Date(Math.min(...starts)), wakeAt: new Date(Math.max(...ends)) }
-      : null,
+    existing: proposal.data
+      ? { bedAt: new Date(proposal.data.bed_at), wakeAt: new Date(proposal.data.wake_at) }
+      : blocks.data.length
+        ? { bedAt: new Date(Math.min(...starts)), wakeAt: new Date(Math.max(...ends)) }
+        : null,
     plan: plan.data ? { bedtime: minutesOfTime(plan.data.bedtime), wake: minutesOfTime(plan.data.wake_time) } : null,
   });
   if ("error" in resolved) return reply(422, resolved.error);
 
-  const { error } = await supabase.rpc("set_sleep_night", {
-    p_user: userId,
-    p_night: anchor.night,
-    p_bed_at: resolved.bedAt.toISOString(),
-    p_wake_at: resolved.wakeAt.toISOString(),
-  });
+  const { error } = await supabase.from("sleep_proposals").upsert(
+    {
+      user_id: userId,
+      night: anchor.night,
+      bed_at: resolved.bedAt.toISOString(),
+      wake_at: resolved.wakeAt.toISOString(),
+      created_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id,night" },
+  );
   if (error) throw new Error(error.message);
 
   const bedClock = formatInstantClock(resolved.bedAt);
   const wakeClock = formatInstantClock(resolved.wakeAt);
-  return reply(200, `خواب ثبت شد: ${bedClock} تا ${wakeClock}`, {
+  return reply(200, `پیشنهاد خواب ${bedClock} تا ${wakeClock} فرستاده شد؛ در تسکلندر تأییدش کنید.`, {
     night: anchor.night,
     bed_at: resolved.bedAt.toISOString(),
     wake_at: resolved.wakeAt.toISOString(),

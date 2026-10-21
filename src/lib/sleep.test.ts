@@ -157,8 +157,19 @@ describe("sleepSuggestionsFor", () => {
 
   it("offers the night before and the night starting that evening", () => {
     expect(sleepSuggestionsFor("2026-10-13", plans, new Set(), now)).toEqual([
-      { night: "2026-10-12", bedAt: at("2026-10-12T23:00:00").toISOString(), wakeAt: at("2026-10-13T07:00:00").toISOString() },
-      { night: "2026-10-13", bedAt: at("2026-10-13T23:30:00").toISOString(), wakeAt: at("2026-10-14T06:30:00").toISOString() },
+      { night: "2026-10-12", bedAt: at("2026-10-12T23:00:00").toISOString(), wakeAt: at("2026-10-13T07:00:00").toISOString(), from: "schedule" },
+      { night: "2026-10-13", bedAt: at("2026-10-13T23:30:00").toISOString(), wakeAt: at("2026-10-14T06:30:00").toISOString(), from: "schedule" },
+    ]);
+  });
+
+  it("asks about the phone's proposal instead, even for a settled night", () => {
+    const proposal = { night: "2026-10-13", bedAt: at("2026-10-14T00:15:00").toISOString(), wakeAt: at("2026-10-14T06:00:00").toISOString() };
+    // 00:15 is on the 14th, so on the 13th only the night before is asked about
+    expect(sleepSuggestionsFor("2026-10-13", plans, new Set(["2026-10-13"]), now, [proposal]).map((s) => s.from)).toEqual([
+      "schedule",
+    ]);
+    expect(sleepSuggestionsFor("2026-10-14", [], new Set(["2026-10-13"]), now, [proposal])).toEqual([
+      { ...proposal, from: "phone" },
     ]);
   });
 

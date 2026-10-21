@@ -7,11 +7,17 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock("../auth", () => ({ getCurrentUser: mocks.user }));
 vi.mock("../supabase/server", () => ({
-  createClient: async () => ({ rpc: mocks.rpc, from: () => ({ upsert: mocks.upsert }) }),
+  createClient: async () => ({
+    rpc: mocks.rpc,
+    from: () => {
+      const chain = { delete: () => chain, eq: () => chain, then: (r: (v: unknown) => unknown) => r({ error: null }) };
+      return { upsert: mocks.upsert, delete: chain.delete };
+    },
+  }),
 }));
 vi.mock("next/cache", () => ({ refresh: vi.fn() }));
 import { hashHookToken } from "../sleep-hook";
-import { createSleepPhoneLink, saveSleepSchedule } from "./sleep";
+import { acceptSleepSuggestion, createSleepPhoneLink, saveSleepSchedule } from "./sleep";
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -65,5 +71,23 @@ describe("createSleepPhoneLink", () => {
     mocks.user.mockResolvedValue(null);
     expect((await createSleepPhoneLink()).error).toBeDefined();
     expect(mocks.upsert).not.toHaveBeenCalled();
+  });
+});
+
+describe("acceptSleepSuggestion", () => {
+  it("saves the night with the times the user typed", async () => {
+    expect(await acceptSleepSuggestion("2026-10-13", { bed: "00:30", wake: "08:00" })).toEqual({});
+    expect(mocks.rpc).toHaveBeenCalledWith("set_sleep_night", {
+      p_user: "owner",
+      p_night: "2026-10-13",
+      // a bedtime before noon is after the night's midnight
+      p_bed_at: new Date("2026-10-14T00:30:00+03:30").toISOString(),
+      p_wake_at: new Date("2026-10-14T08:00:00+03:30").toISOString(),
+    });
+  });
+
+  it("refuses typed times outside 1 to 16 hours", async () => {
+    expect((await acceptSleepSuggestion("2026-10-13", { bed: "23:00", wake: "23:20" })).error).toBeDefined();
+    expect(mocks.rpc).not.toHaveBeenCalled();
   });
 });

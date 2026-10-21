@@ -292,6 +292,30 @@ export type Database = {
         }
         Relationships: []
       }
+      sleep_proposals: {
+        Row: {
+          bed_at: string
+          created_at: string
+          night: string
+          user_id: string
+          wake_at: string
+        }
+        Insert: {
+          bed_at: string
+          created_at?: string
+          night: string
+          user_id: string
+          wake_at: string
+        }
+        Update: {
+          bed_at?: string
+          created_at?: string
+          night?: string
+          user_id?: string
+          wake_at?: string
+        }
+        Relationships: []
+      }
       sleep_schedules: {
         Row: {
           bedtime: string

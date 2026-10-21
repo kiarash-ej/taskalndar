@@ -2,10 +2,16 @@
 
 import { refresh } from "next/cache";
 import { getCurrentUser } from "../auth";
-import { formatClock, minutesOfTime } from "../blocks";
+import { formatClock, MINUTES_PER_DAY, minutesOfTime, parseClock } from "../blocks";
 import { isIsoDate, weekdayIndex } from "../dates";
 import { GENERIC_ERROR, type FormState } from "../form-state";
-import { parseSleepForm, plannedNight } from "../sleep";
+import {
+  MAX_SLEEP_MINUTES,
+  MIN_SLEEP_MINUTES,
+  parseSleepForm,
+  plannedNight,
+  sleepMinutes,
+} from "../sleep";
 import { hashHookToken, newHookToken } from "../sleep-hook";
 import { createClient } from "../supabase/server";
 
@@ -36,55 +42,79 @@ export async function saveSleepSchedule(_prev: FormState, formData: FormData): P
   };
 }
 
-// Puts a suggested night on the planner, from the schedule as it is now.
-// A night already there is left alone.
-export async function acceptSleepSuggestion(night: string): Promise<{ error?: string }> {
+// The user's answer "yes" to a sleep question: puts the night on the
+// planner, replacing whatever it had. With `times` ("HH:MM" bedtime and wake
+// time the user typed) those are used; otherwise the phone's proposal for the
+// night, or else the schedule.
+export async function acceptSleepSuggestion(
+  night: string,
+  times?: { bed: string; wake: string },
+): Promise<{ error?: string }> {
   const user = await getCurrentUser();
   if (!user) return { error: SIGNED_OUT };
   if (!isIsoDate(night)) return { error: GENERIC_ERROR };
 
   const supabase = await createClient();
-  const [plan, existing] = await Promise.all([
-    supabase
-      .from("sleep_schedules")
-      .select("bedtime, wake_time")
-      .eq("user_id", user.id)
-      .eq("weekday", weekdayIndex(night))
-      .maybeSingle(),
-    supabase.from("time_blocks").select("id").eq("user_id", user.id).eq("sleep_night", night).limit(1),
-  ]);
-  if (plan.error || existing.error) return { error: GENERIC_ERROR };
-  if (!plan.data) return { error: "برای این شب برنامهٔ خوابی نیست." };
-  if (existing.data.length > 0) {
-    refresh();
-    return {};
+  let span: { bedAt: Date; wakeAt: Date };
+  if (times) {
+    const bedtime = parseClock(times.bed);
+    const wake = parseClock(times.wake);
+    if (bedtime === null || wake === null || bedtime === MINUTES_PER_DAY || wake === MINUTES_PER_DAY) {
+      return { error: "ساعت خواب و بیداری را وارد کنید." };
+    }
+    const length = sleepMinutes(bedtime, wake);
+    if (length < MIN_SLEEP_MINUTES || length > MAX_SLEEP_MINUTES) return { error: "خواب باید بین ۱ تا ۱۶ ساعت باشد." };
+    span = plannedNight(night, { bedtime, wake });
+  } else {
+    const [proposal, plan] = await Promise.all([
+      supabase.from("sleep_proposals").select("bed_at, wake_at").eq("user_id", user.id).eq("night", night).maybeSingle(),
+      supabase
+        .from("sleep_schedules")
+        .select("bedtime, wake_time")
+        .eq("user_id", user.id)
+        .eq("weekday", weekdayIndex(night))
+        .maybeSingle(),
+    ]);
+    if (proposal.error || plan.error) return { error: GENERIC_ERROR };
+    if (proposal.data) {
+      span = { bedAt: new Date(proposal.data.bed_at), wakeAt: new Date(proposal.data.wake_at) };
+    } else if (plan.data) {
+      span = plannedNight(night, {
+        bedtime: minutesOfTime(plan.data.bedtime),
+        wake: minutesOfTime(plan.data.wake_time),
+      });
+    } else {
+      return { error: "برای این شب پیشنهادی نیست. ساعت را خودتان وارد کنید." };
+    }
   }
 
-  const { bedAt, wakeAt } = plannedNight(night, {
-    bedtime: minutesOfTime(plan.data.bedtime),
-    wake: minutesOfTime(plan.data.wake_time),
-  });
   const { error } = await supabase.rpc("set_sleep_night", {
     p_user: user.id,
     p_night: night,
-    p_bed_at: bedAt.toISOString(),
-    p_wake_at: wakeAt.toISOString(),
+    p_bed_at: span.bedAt.toISOString(),
+    p_wake_at: span.wakeAt.toISOString(),
   });
   if (error) return { error: GENERIC_ERROR };
+  // answered: the phone's question for this night is done
+  await supabase.from("sleep_proposals").delete().eq("user_id", user.id).eq("night", night);
   refresh();
   return {};
 }
 
-// "نه" on a suggested night: it isn't offered again.
-export async function skipSleepSuggestion(night: string): Promise<{ error?: string }> {
+// The user's answer "no": the phone's proposal is dropped, and the schedule
+// doesn't suggest this night again.
+export async function skipSleepSuggestion(night: string, from: "schedule" | "phone"): Promise<{ error?: string }> {
   const user = await getCurrentUser();
   if (!user) return { error: SIGNED_OUT };
   if (!isIsoDate(night)) return { error: GENERIC_ERROR };
 
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("sleep_skips")
-    .upsert({ user_id: user.id, night }, { onConflict: "user_id,night", ignoreDuplicates: true });
+  const { error } =
+    from === "phone"
+      ? await supabase.from("sleep_proposals").delete().eq("user_id", user.id).eq("night", night)
+      : await supabase
+          .from("sleep_skips")
+          .upsert({ user_id: user.id, night }, { onConflict: "user_id,night", ignoreDuplicates: true });
   if (error) return { error: GENERIC_ERROR };
   refresh();
   return {};

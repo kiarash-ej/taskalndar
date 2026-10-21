@@ -12,11 +12,11 @@ import {
   updateBlock,
 } from "@/lib/actions/blocks";
 import { clockOf, formatClock, formatClockRange, MINUTES_PER_DAY } from "@/lib/blocks";
-import type { IsoDate } from "@/lib/dates";
+import { calendarDateOf, weekdayIndex, type IsoDate } from "@/lib/dates";
 import { initialFormState } from "@/lib/form-state";
-import { faNumber } from "@/lib/format";
+import { faNumber, WEEKDAY_NAMES } from "@/lib/format";
 import { formatLead } from "@/lib/reminders";
-import type { SleepSuggestion } from "@/lib/sleep";
+import { formatInstantClock, type SleepSuggestion } from "@/lib/sleep";
 import type { BlockRow } from "@/lib/report";
 import { BlockForm } from "./block-form";
 import { Bell, Moon, Pencil, Trash } from "./icons";
@@ -63,7 +63,7 @@ export function DayBlocks({
       {sleepSuggestions.length > 0 && (
         <ul className="space-y-2">
           {sleepSuggestions.map((s) => (
-            <SleepSuggestionItem key={s.night} day={day} suggestion={s} onError={setError} />
+            <SleepSuggestionItem key={`${s.night}-${s.from}`} suggestion={s} onError={setError} />
           ))}
         </ul>
       )}
@@ -108,31 +108,32 @@ export function DayBlocks({
 
       <TemplateControls day={day} hasBlocks={blocks.length > 0} templates={templates} onError={setError} />
 
+      {!sleepSuggestions.some((s) => s.night === day) && <OwnSleep day={day} onError={setError} />}
+
       <p className="text-xs text-muted">
         پیشنهادهای خواب از{" "}
         <Link href="/settings#sleep" className="font-semibold text-accent hover:underline">
           برنامهٔ خواب
         </Link>{" "}
-        می‌آیند و تا «ثبت» را نزنید چیزی ذخیره نمی‌شود.
+        و لینک گوشی می‌آیند و تا جواب «بله» ندهید چیزی ذخیره نمی‌شود.
       </p>
     </div>
   );
 }
 
-// A night the sleep schedule suggests: shown, not saved, until accepted.
+// "Saturday night 23:00 to 07:00, save it?" Nothing is saved until the user
+// says yes, with these times or ones they type; "no" drops the question.
 function SleepSuggestionItem({
-  day,
   suggestion,
   onError,
 }: {
-  day: IsoDate;
   suggestion: SleepSuggestion;
   onError: (error: string | null) => void;
 }) {
   const [pending, startTransition] = useTransition();
-  // the part of the night on this day
-  const start = Math.max(0, clockOf(day, suggestion.bedAt));
-  const end = Math.min(MINUTES_PER_DAY, clockOf(day, suggestion.wakeAt));
+  const [editing, setEditing] = useState(false);
+  const nightName = `${WEEKDAY_NAMES[weekdayIndex(suggestion.night)]} شب`;
+  const span = `${formatInstantClock(new Date(suggestion.bedAt))} تا ${formatInstantClock(new Date(suggestion.wakeAt))}`;
 
   function run(task: () => Promise<{ error?: string }>) {
     onError(null);
@@ -145,36 +146,135 @@ function SleepSuggestionItem({
   return (
     <li
       className={cx(
-        "flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-dashed border-accent/50 bg-accent-soft/40 px-3 py-2",
+        "space-y-2 rounded-xl border border-dashed border-accent/50 bg-accent-soft/40 px-3 py-2.5",
         pending && "opacity-60",
       )}
     >
-      <Moon className="text-accent" />
-      <div className="min-w-0 flex-1">
-        <span className="text-sm font-semibold text-accent tabular-nums">{formatClockRange(start, end)}</span>{" "}
-        <span className="font-medium">خواب</span>
-        <span className="ms-2 text-xs text-muted">پیشنهاد از برنامهٔ خواب</span>
+      <div className="flex items-start gap-2">
+        <Moon className="mt-0.5 shrink-0 text-accent" />
+        <p className="min-w-0 flex-1 text-sm leading-7">
+          {suggestion.from === "phone" ? "گوشی برای " : "طبق برنامهٔ خواب، "}
+          <strong>{nightName}</strong> از <bdi className="font-semibold text-accent tabular-nums">{span}</bdi>
+          {suggestion.from === "phone" ? " را فرستاده. " : " می‌خوابید. "}
+          ثبت شود؟
+        </p>
       </div>
-      <div className="flex gap-1.5">
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => run(() => acceptSleepSuggestion(suggestion.night))}
-          className={cx(buttonClass.primary, "px-3 py-1")}
-        >
-          ثبت
-        </button>
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => run(() => skipSleepSuggestion(suggestion.night))}
-          className={cx(buttonClass.ghost, "px-3 py-1")}
-          aria-label="این شب پیشنهاد نشود"
-        >
-          نه
-        </button>
-      </div>
+      {editing ? (
+        <SleepTimesForm
+          defaultBed={clockOfInstant(suggestion.bedAt)}
+          defaultWake={clockOfInstant(suggestion.wakeAt)}
+          pending={pending}
+          onCancel={() => setEditing(false)}
+          onSubmit={(times) => run(() => acceptSleepSuggestion(suggestion.night, times))}
+        />
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => run(() => acceptSleepSuggestion(suggestion.night))}
+            className={cx(buttonClass.primary, "px-3 py-1")}
+          >
+            بله، ثبت شود
+          </button>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => setEditing(true)}
+            className={cx(buttonClass.secondary, "px-3 py-1")}
+          >
+            ساعت دیگر
+          </button>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => run(() => skipSleepSuggestion(suggestion.night, suggestion.from))}
+            className={cx(buttonClass.ghost, "px-3 py-1")}
+          >
+            نه
+          </button>
+        </div>
+      )}
     </li>
+  );
+}
+
+// "HH:MM" of an instant in Tehran, for <input type="time">
+function clockOfInstant(instant: string): string {
+  return formatClock(clockOf(calendarDateOf(instant), instant));
+}
+
+// Bedtime and wake time typed by the user, for a night the app suggested or
+// one of their own.
+function SleepTimesForm({
+  defaultBed,
+  defaultWake,
+  pending,
+  onSubmit,
+  onCancel,
+}: {
+  defaultBed: string;
+  defaultWake: string;
+  pending: boolean;
+  onSubmit: (times: { bed: string; wake: string }) => void;
+  onCancel: () => void;
+}) {
+  const [bed, setBed] = useState(defaultBed);
+  const [wake, setWake] = useState(defaultWake);
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <label className="flex items-center gap-1.5 text-sm text-muted">
+        خواب
+        <input type="time" dir="ltr" value={bed} onChange={(e) => setBed(e.target.value)} className={cx(inputClass, "w-32! py-1")} />
+      </label>
+      <label className="flex items-center gap-1.5 text-sm text-muted">
+        بیداری
+        <input type="time" dir="ltr" value={wake} onChange={(e) => setWake(e.target.value)} className={cx(inputClass, "w-32! py-1")} />
+      </label>
+      <button
+        type="button"
+        disabled={pending || !bed || !wake}
+        onClick={() => onSubmit({ bed, wake })}
+        className={cx(buttonClass.primary, "px-3 py-1")}
+      >
+        ثبت
+      </button>
+      <button type="button" disabled={pending} onClick={onCancel} className={cx(buttonClass.ghost, "px-3 py-1")}>
+        انصراف
+      </button>
+    </div>
+  );
+}
+
+// The user's own night, when the app has nothing to ask about (or they want
+// a different one): the night starting this day's evening.
+function OwnSleep({ day, onError }: { day: IsoDate; onError: (error: string | null) => void }) {
+  const [open, setOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
+  if (!open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)} className="text-sm font-semibold text-accent hover:underline">
+        + ثبت خواب {WEEKDAY_NAMES[weekdayIndex(day)]} شب با ساعت دلخواه
+      </button>
+    );
+  }
+  return (
+    <div className={cx("rounded-xl border border-line p-3", pending && "opacity-60")}>
+      <SleepTimesForm
+        defaultBed="23:00"
+        defaultWake="07:00"
+        pending={pending}
+        onCancel={() => setOpen(false)}
+        onSubmit={(times) => {
+          onError(null);
+          startTransition(async () => {
+            const result = await acceptSleepSuggestion(day, times);
+            if (result.error) onError(result.error);
+            else setOpen(false);
+          });
+        }}
+      />
+    </div>
   );
 }
 

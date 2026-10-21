@@ -78,27 +78,46 @@ export interface SleepSuggestion {
   // ISO timestamps, so the suggestion can go to the browser as is
   bedAt: string;
   wakeAt: string;
+  // the weekly schedule, or a night the phone link sent
+  from: "schedule" | "phone";
 }
 
-// The schedule's suggestions for the nights that touch `day` (the one from
-// the evening before and the one starting that evening), leaving out nights
-// already on the planner or turned down, and nights over for a day or more.
+export interface SleepProposal {
+  night: IsoDate;
+  bedAt: string;
+  wakeAt: string;
+}
+
+// What to ask about for the nights that touch `day` (the one from the evening
+// before and the one starting that evening). A night the phone sent is asked
+// about even if it's on the planner already (to replace it); the schedule's
+// suggestion only for nights not on the planner and not turned down. Nights
+// over for a day or more aren't asked about.
 export function sleepSuggestionsFor(
   day: IsoDate,
   plans: SleepPlan[],
   settled: Set<IsoDate>,
   now: Date,
+  proposals: SleepProposal[] = [],
 ): SleepSuggestion[] {
   const dayStart = Date.parse(clockToInstant(day, 0));
   const dayEnd = Date.parse(clockToInstant(day, MINUTES_PER_DAY));
   const suggestions: SleepSuggestion[] = [];
   for (const night of [addDays(day, -1), day]) {
+    const proposal = proposals.find((p) => p.night === night);
     const plan = plans.find((p) => p.weekday === weekdayIndex(night));
-    if (!plan || settled.has(night)) continue;
-    const { bedAt, wakeAt } = plannedNight(night, plan);
-    if (wakeAt.getTime() <= dayStart || bedAt.getTime() >= dayEnd) continue;
-    if (wakeAt.getTime() < now.getTime() - MINUTES_PER_DAY * MS_PER_MINUTE) continue;
-    suggestions.push({ night, bedAt: bedAt.toISOString(), wakeAt: wakeAt.toISOString() });
+    let suggestion: SleepSuggestion | null = null;
+    if (proposal) suggestion = { ...proposal, from: "phone" };
+    else if (plan && !settled.has(night)) {
+      const { bedAt, wakeAt } = plannedNight(night, plan);
+      suggestion = { night, bedAt: bedAt.toISOString(), wakeAt: wakeAt.toISOString(), from: "schedule" };
+    }
+    if (!suggestion) continue;
+    const bed = Date.parse(suggestion.bedAt);
+    const wake = Date.parse(suggestion.wakeAt);
+    if (wake <= dayStart || bed >= dayEnd) continue;
+    if (wake < now.getTime() - MINUTES_PER_DAY * MS_PER_MINUTE) continue;
+    suggestions.push(suggestion);
   }
   return suggestions;
 }

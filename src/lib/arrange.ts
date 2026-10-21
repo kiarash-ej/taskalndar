@@ -17,6 +17,8 @@ export interface ArrangeTask {
   title: string;
   // how long it needs
   minutes: number;
+  // a start the user chose; kept as is, even outside the waking window
+  start?: number;
 }
 
 export interface Placement extends Interval {
@@ -45,8 +47,9 @@ export function freeIntervals(window: Interval, busy: Interval[]): Interval[] {
   return free;
 }
 
-// Places each task at the earliest rounded start where it fits, keeping
-// `gap` minutes after anything busy or already placed.
+// Places the tasks with a start the user chose there, then each other task
+// at the earliest rounded start where it fits, keeping `gap` minutes after
+// anything busy or already placed.
 export function arrangeTasks(
   tasks: ArrangeTask[],
   window: Interval,
@@ -56,7 +59,16 @@ export function arrangeTasks(
   const taken = busy.map((b) => ({ start: b.start, end: b.end + gap }));
   const placed: Placement[] = [];
   const unplaced: ArrangeTask[] = [];
-  for (const task of tasks) {
+  for (const task of tasks.filter((t) => t.start !== undefined)) {
+    const start = task.start!;
+    if (start < 0 || start + task.minutes > MINUTES_PER_DAY) {
+      unplaced.push(task);
+      continue;
+    }
+    placed.push({ id: task.id, title: task.title, start, end: start + task.minutes });
+    taken.push({ start, end: start + task.minutes + gap });
+  }
+  for (const task of tasks.filter((t) => t.start === undefined)) {
     const slot = freeIntervals(window, taken)
       .map((f) => ({ start: roundUp(f.start), end: f.end }))
       .find((f) => f.end - f.start >= task.minutes);

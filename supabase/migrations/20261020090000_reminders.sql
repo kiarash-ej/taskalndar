@@ -1,11 +1,11 @@
 -- Reminders: a Bale/Telegram message some minutes before a time block starts.
--- Each user picks a default lead time; any block can override it or turn its
--- reminder off. Sent through the user's linked notification_channels (linked
+-- Off until the user turns them on; each user picks a default lead time, and
+-- any block can override it or turn its reminder off. Sent through the user's linked notification_channels (linked
 -- is enough: `enabled` there is about the daily summary).
 
 create table public.reminder_settings (
   user_id uuid primary key references auth.users(id) on delete cascade,
-  enabled boolean not null default true,
+  enabled boolean not null default false,
   -- how many minutes before a block starts, unless the block says otherwise
   lead_minutes smallint not null default 10 check (lead_minutes between 0 and 1440),
   -- remind at bedtime for the sleep schedule's blocks too

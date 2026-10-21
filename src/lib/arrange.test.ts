@@ -69,7 +69,7 @@ describe("arrangeWindow", () => {
         sleepBlock("2026-10-14T00:00:00", "2026-10-14T07:00:00"),
         { start_at: at("2026-10-14T16:00:00"), end_at: at("2026-10-14T18:00:00"), source: "manual" },
       ],
-      [{ night: "2026-10-14", bedAt: new Date(at("2026-10-14T23:30:00")).toISOString(), wakeAt: new Date(at("2026-10-15T07:00:00")).toISOString() }],
+      [{ night: "2026-10-14", bedAt: new Date(at("2026-10-14T23:30:00")).toISOString(), wakeAt: new Date(at("2026-10-15T07:00:00")).toISOString(), from: "schedule" }],
       new Date(at("2026-10-13T12:00:00")),
     );
     expect(result).toEqual({ window: { start: h(7), end: h(23, 30) }, busy: [{ start: h(16), end: h(18) }] });
@@ -80,5 +80,27 @@ describe("arrangeWindow", () => {
     expect(arrangeWindow("2026-10-14", [], [], now)?.window).toEqual({ start: h(10, 15), end: DEFAULT_WINDOW.end });
     expect(arrangeWindow("2026-10-15", [], [], now)?.window).toEqual(DEFAULT_WINDOW);
     expect(arrangeWindow("2026-10-13", [], [], now)).toBeNull();
+  });
+});
+
+describe("arrangeTasks with the user's own times", () => {
+  it("keeps a chosen start and arranges the rest around it", () => {
+    const result = arrangeTasks(
+      [
+        { id: "a", title: "a", minutes: 60 },
+        { id: "b", title: "b", minutes: 60, start: h(9) },
+      ],
+      { start: h(9), end: h(13) },
+      [],
+    );
+    expect(result.placed.map((p) => [p.id, p.start, p.end])).toEqual([
+      ["b", h(9), h(10)],
+      ["a", h(10), h(11)],
+    ]);
+  });
+
+  it("can't place a chosen start that runs past midnight", () => {
+    const result = arrangeTasks([{ id: "a", title: "a", minutes: 60, start: h(23, 30) }], DEFAULT_WINDOW, []);
+    expect(result.unplaced.map((t) => t.id)).toEqual(["a"]);
   });
 });
