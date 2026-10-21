@@ -9,7 +9,7 @@ import { OTHER, OWNER } from "./test-db";
 // future day, next to the replacement that starts then.
 
 const supabaseDir = fileURLToPath(new URL("../../supabase/", import.meta.url));
-const NEW_MIGRATION = "20261021090000_future_task_cutoffs.sql";
+const NEW_MIGRATION = "20261021220200_future_task_cutoffs.sql";
 let db: PGlite;
 let today: string;
 
