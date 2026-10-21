@@ -1,6 +1,6 @@
 // Generated from the Supabase project (herhqlqicakwqoicgbtw) with
 // `supabase gen types typescript` after applying every migration in
-// supabase/migrations (2026-10-16). Regenerate after each new migration.
+// supabase/migrations (2026-10-21). Regenerate after each new migration.
 
 export type Json =
   | string
@@ -18,18 +18,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      _write_probe: {
-        Row: {
-          id: number | null
-        }
-        Insert: {
-          id?: number | null
-        }
-        Update: {
-          id?: number | null
-        }
-        Relationships: []
-      }
       daily_notes: {
         Row: {
           body: string
