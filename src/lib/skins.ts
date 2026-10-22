@@ -36,13 +36,38 @@ export const SKIN_INFO: Record<Skin, { label: string; description: string; swatc
   },
 };
 
+// The moving backgrounds; each built-in skin uses one, personal themes pick any.
+export const SCENES = ["waves", "stars", "leaves", "petals", "aurora"] as const;
+export type Scene = (typeof SCENES)[number];
+
+export const SCENE_LABELS: Record<Scene | "none", string> = {
+  none: "بدون حرکت",
+  waves: "موج",
+  stars: "ستاره",
+  leaves: "برگ",
+  petals: "گلبرگ",
+  aurora: "شفق",
+};
+
+export const SKIN_SCENE: Record<Skin, Scene> = {
+  ocean: "waves",
+  galaxy: "stars",
+  forest: "leaves",
+  sakura: "petals",
+  aurora: "aurora",
+};
+
+// The skin cookie holds a built-in skin's name, or "custom-<id>" for a personal theme.
+export const CUSTOM_PREFIX = "custom-";
+
 export function parseSkin(value: unknown): Skin | null {
   return (SKINS as readonly unknown[]).includes(value) ? (value as Skin) : null;
 }
 
 const YEAR_SECONDS = 365 * 24 * 60 * 60;
 
-export function skinCookie(skin: Skin | null): string {
+// `skin`: a built-in skin, "custom-<id>", or null for none.
+export function skinCookie(skin: string | null): string {
   return skin === null
     ? `${SKIN_COOKIE}=; path=/; max-age=0; samesite=lax`
     : `${SKIN_COOKIE}=${skin}; path=/; max-age=${YEAR_SECONDS}; samesite=lax`;

@@ -87,6 +87,16 @@ body {
 :root {
   /* stars and sparkles in skin scenes: dark ink by day, warm light at night */
   --scene-star: color-mix(in srgb, var(--accent) 70%, transparent);
+  /* the colours of aurora ribbons and nebulae, from the accent unless a skin sets its own */
+  --scene-1: var(--accent);
+  --scene-2: color-mix(in srgb, var(--accent) 45%, #6366f1);
+  --scene-3: color-mix(in srgb, var(--accent) 45%, #ec4899);
+}
+:root[data-skin="aurora"],
+:root[data-skin="galaxy"] {
+  --scene-1: #10b981;
+  --scene-2: #6366f1;
+  --scene-3: #ec4899;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -187,8 +197,8 @@ body {
   --accent-fg: #022c22;
 }
 
-/* a skin's scene replaces the custom background while it's on */
-:root[data-skin] .app-background {
+/* a skin's or personal theme's scene replaces the custom background while it's on */
+:root[data-scene] .app-background {
   display: none;
 }
 
@@ -206,16 +216,16 @@ body {
     opacity: 1;
   }
   100% {
-    transform: translateY(-105vh) translateX(var(--drift, 20px));
+    transform: translateY(calc(var(--travel, 110vh) * -0.95)) translateX(var(--drift, 20px));
     opacity: 0;
   }
 }
 @keyframes fall {
   0% {
-    transform: translateY(-10vh) translateX(0);
+    transform: translateY(calc(var(--travel, 110vh) * -0.1)) translateX(0);
   }
   100% {
-    transform: translateY(110vh) translateX(var(--drift, 60px));
+    transform: translateY(var(--travel, 110vh)) translateX(var(--drift, 60px));
   }
 }
 @keyframes sway {

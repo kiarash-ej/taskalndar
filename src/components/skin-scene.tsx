@@ -1,49 +1,82 @@
 "use client";
 
 import { useEffect, useRef, useSyncExternalStore, type CSSProperties } from "react";
-import { parseSkin, seeded, type Skin } from "@/lib/skins";
+import type { Intensity } from "@/lib/custom-theme";
+import { seeded, SCENES, type Scene } from "@/lib/skins";
 
-// The living background of a special skin, behind everything (the cards stay
-// opaque, so text is never over moving shapes). It follows <html data-skin>,
-// which the settings picker changes without a reload.
+// The living background of a skin or personal theme, behind everything (the
+// cards stay opaque, so text is never over moving shapes). It follows
+// <html data-scene> and data-intensity, which the settings change without a
+// reload. With `contained` it fills its parent instead (the theme editor's preview).
 
 function subscribe(onChange: () => void) {
   const observer = new MutationObserver(onChange);
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-skin"] });
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["data-scene", "data-intensity"],
+  });
   return () => observer.disconnect();
 }
 
-export function SkinScene({ initial }: { initial: Skin | null }) {
-  const skin = useSyncExternalStore(
-    subscribe,
-    () => parseSkin(document.documentElement.dataset.skin),
-    () => initial,
-  );
-  if (!skin) return null;
+const readScene = (): Scene | null => {
+  const value = document.documentElement.dataset.scene;
+  return (SCENES as readonly (string | undefined)[]).includes(value) ? (value as Scene) : null;
+};
+const readIntensity = (): Intensity => {
+  const n = Number(document.documentElement.dataset.intensity);
+  return n === 1 || n === 3 ? n : 2;
+};
+
+export function SkinScene({ initial, intensity }: { initial: Scene | null; intensity: Intensity }) {
+  const scene = useSyncExternalStore(subscribe, readScene, () => initial);
+  const level = useSyncExternalStore(subscribe, readIntensity, () => intensity);
+  if (!scene) return null;
+  return <SceneLayer scene={scene} level={level} />;
+}
+
+// One scene. `contained` draws it inside the parent (which must be relative).
+export function SceneLayer({ scene, level, contained = false }: { scene: Scene; level: Intensity; contained?: boolean }) {
+  const props = { level, contained };
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-      {skin === "ocean" && <Ocean />}
-      {skin === "galaxy" && <Galaxy />}
-      {skin === "forest" && <Forest />}
-      {skin === "sakura" && <Sakura />}
-      {skin === "aurora" && <Aurora />}
+    <div
+      aria-hidden
+      className={`pointer-events-none ${contained ? "absolute" : "fixed -z-10"} inset-0 overflow-hidden`}
+      // falling and rising travel the whole screen, or just the preview box
+      style={vars({ "--travel": contained ? "260px" : "110vh" })}
+    >
+      {scene === "waves" && <Ocean {...props} />}
+      {scene === "stars" && <Galaxy {...props} />}
+      {scene === "leaves" && <Forest {...props} />}
+      {scene === "petals" && <Sakura {...props} />}
+      {scene === "aurora" && <Aurora {...props} />}
     </div>
   );
 }
 
+interface SceneProps {
+  level: Intensity;
+  contained: boolean;
+}
+
 // generated numbers rounded, so the server's HTML and the browser's styles match exactly
 const r = (n: number) => Math.round(n * 100) / 100;
+// how many shapes, and how strong, at each intensity
+const COUNT = { 1: 0.5, 2: 1, 3: 1.7 } as const;
+const STRENGTH = { 1: 0.65, 2: 1, 3: 1.3 } as const;
+const count = (base: number, level: Intensity) => Math.max(1, Math.round(base * COUNT[level]));
 
-const tint = (percent: number) => `color-mix(in srgb, var(--accent) ${percent}%, var(--bg))`;
-const fade = (percent: number) => `color-mix(in srgb, var(--accent) ${percent}%, transparent)`;
+const tint = (percent: number) => `color-mix(in srgb, var(--accent) ${Math.min(100, r(percent))}%, var(--bg))`;
+const fade = (percent: number) => `color-mix(in srgb, var(--accent) ${Math.min(100, r(percent))}%, transparent)`;
 const vars = (v: Record<string, string | number>) => v as CSSProperties;
 
 // one wave, drawn twice side by side so sliding by half loops seamlessly
 const WAVE = "M0 40 Q 150 0 300 40 T 600 40 T 900 40 T 1200 40 V 120 H 0 Z";
 
-function Ocean() {
+function Ocean({ level, contained }: SceneProps) {
+  const k = STRENGTH[level];
+  const scale = contained ? 0.45 : 1;
   return (
-    <div className="absolute inset-0" style={{ backgroundImage: `linear-gradient(to bottom, var(--bg) 35%, ${tint(22)})` }}>
+    <div className="absolute inset-0" style={{ backgroundImage: `linear-gradient(to bottom, var(--bg) 35%, ${tint(22 * k)})` }}>
       {[
         { h: 170, o: 18, d: 34 },
         { h: 130, o: 26, d: 24 },
@@ -55,8 +88,8 @@ function Ocean() {
           preserveAspectRatio="none"
           className="absolute bottom-0 left-0 w-[200%]"
           style={{
-            height: w.h,
-            fill: fade(w.o),
+            height: r(w.h * scale),
+            fill: fade(w.o * k),
             animation: `wave-drift ${w.d}s linear infinite`,
             animationDirection: i % 2 ? "reverse" : "normal",
           }}
@@ -65,8 +98,8 @@ function Ocean() {
           <path d={WAVE} transform="translate(1200 0)" />
         </svg>
       ))}
-      {Array.from({ length: 14 }, (_, i) => {
-        const size = r(6 + seeded(i) * 14);
+      {Array.from({ length: count(14, level) }, (_, i) => {
+        const size = r((6 + seeded(i) * 14) * (contained ? 0.6 : 1));
         return (
           <span
             key={i}
@@ -75,8 +108,8 @@ function Ocean() {
               left: `${r(seeded(i, 2) * 100)}%`,
               width: size,
               height: size,
-              borderColor: fade(45),
-              backgroundColor: fade(8),
+              borderColor: fade(45 * k),
+              backgroundColor: fade(8 * k),
               "--drift": `${r((seeded(i, 3) - 0.5) * 80)}px`,
               animation: `rise ${r(10 + seeded(i, 4) * 10)}s ease-in infinite`,
               animationDelay: `${r(-seeded(i, 5) * 20)}s`,
@@ -88,14 +121,14 @@ function Ocean() {
   );
 }
 
-function Galaxy() {
+function Galaxy({ level, contained }: SceneProps) {
   const canvas = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const cv = canvas.current;
     const ctx = cv?.getContext("2d");
     if (!cv || !ctx) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const stars = Array.from({ length: 140 }, (_, i) => ({
+    const stars = Array.from({ length: count(140, level) }, (_, i) => ({
       x: seeded(i, 7),
       y: seeded(i, 8),
       r: 0.5 + seeded(i, 9) * 1.4,
@@ -107,8 +140,9 @@ function Galaxy() {
 
     const draw = (time: number) => {
       const dpr = window.devicePixelRatio || 1;
-      const w = window.innerWidth;
-      const h = window.innerHeight;
+      const box = contained ? cv.getBoundingClientRect() : { width: window.innerWidth, height: window.innerHeight };
+      const w = box.width;
+      const h = box.height;
       if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
         cv.width = Math.round(w * dpr);
         cv.height = Math.round(h * dpr);
@@ -130,7 +164,7 @@ function Galaxy() {
         const k = (s - shooting.t) / 0.9;
         if (k > 1) {
           shooting = null;
-          nextShot = s + 5 + Math.random() * 6;
+          nextShot = s + (level === 3 ? 2 : 5) + Math.random() * 6;
         } else {
           const x = (shooting.x - k * 0.25) * w;
           const y = (shooting.y + k * 0.18) * h;
@@ -156,17 +190,18 @@ function Galaxy() {
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", onResize);
     };
-  }, []);
+  }, [level, contained]);
 
+  const k = STRENGTH[level];
   return (
     <div
       className="absolute inset-0"
       style={{
         backgroundColor: "var(--bg)",
         backgroundImage: [
-          `radial-gradient(ellipse 60% 45% at 18% 22%, ${fade(28)}, transparent 70%)`,
-          `radial-gradient(ellipse 50% 40% at 85% 75%, color-mix(in srgb, #ec4899 18%, transparent), transparent 70%)`,
-          `radial-gradient(ellipse 45% 35% at 60% 10%, color-mix(in srgb, #38bdf8 14%, transparent), transparent 70%)`,
+          `radial-gradient(ellipse 60% 45% at 18% 22%, ${fade(28 * k)}, transparent 70%)`,
+          `radial-gradient(ellipse 50% 40% at 85% 75%, color-mix(in srgb, var(--scene-3) ${r(18 * k)}%, transparent), transparent 70%)`,
+          `radial-gradient(ellipse 45% 35% at 60% 10%, color-mix(in srgb, var(--scene-2) ${r(14 * k)}%, transparent), transparent 70%)`,
         ].join(","),
       }}
     >
@@ -177,9 +212,10 @@ function Galaxy() {
 
 const LEAF = "M12 2C6 6 3 11 4 17c4 1 9-1 12-5 2-3 3-7 3-10-3 0-5 0-7 0z";
 
-function Forest() {
+function Forest({ level, contained }: SceneProps) {
+  const k = STRENGTH[level];
   return (
-    <div className="absolute inset-0" style={{ backgroundImage: `linear-gradient(to bottom, ${tint(12)}, var(--bg) 60%)` }}>
+    <div className="absolute inset-0" style={{ backgroundImage: `linear-gradient(to bottom, ${tint(12 * k)}, var(--bg) 60%)` }}>
       {/* light through the branches */}
       {Array.from({ length: 5 }, (_, i) => (
         <span
@@ -188,48 +224,52 @@ function Forest() {
           style={{
             insetInlineStart: `${8 + i * 16}%`,
             rotate: "22deg",
-            backgroundImage: `linear-gradient(to bottom, ${fade(30)}, transparent 70%)`,
+            backgroundImage: `linear-gradient(to bottom, ${fade(30 * k)}, transparent 70%)`,
             filter: "blur(10px)",
             animation: `ray ${5 + i}s ease-in-out infinite alternate`,
             animationDelay: `${-i * 1.3}s`,
           }}
         />
       ))}
-      {Array.from({ length: 12 }, (_, i) => (
-        <span
-          key={i}
-          className="absolute top-0"
-          style={vars({
-            left: `${r(seeded(i, 11) * 100)}%`,
-            "--drift": `${r((seeded(i, 12) - 0.3) * 160)}px`,
-            animation: `fall ${r(14 + seeded(i, 13) * 12)}s linear infinite`,
-            animationDelay: `${r(-seeded(i, 14) * 26)}s`,
-          })}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            width={r(16 + seeded(i, 15) * 14)}
-            height={r(16 + seeded(i, 15) * 14)}
+      {Array.from({ length: count(12, level) }, (_, i) => {
+        const size = r((16 + seeded(i, 15) * 14) * (contained ? 0.7 : 1));
+        return (
+          <span
+            key={i}
+            className="absolute top-0"
             style={vars({
-              fill: i % 3 === 0 ? "color-mix(in srgb, #ca8a04 55%, transparent)" : fade(55),
-              "--from": "-30deg",
-              "--to": "40deg",
-              animation: `sway ${r(2.5 + seeded(i, 16) * 2)}s ease-in-out infinite alternate`,
+              left: `${r(seeded(i, 11) * 100)}%`,
+              "--drift": `${r((seeded(i, 12) - 0.3) * 160)}px`,
+              animation: `fall ${r(14 + seeded(i, 13) * 12)}s linear infinite`,
+              animationDelay: `${r(-seeded(i, 14) * 26)}s`,
             })}
           >
-            <path d={LEAF} />
-          </svg>
-        </span>
-      ))}
+            <svg
+              viewBox="0 0 24 24"
+              width={size}
+              height={size}
+              style={vars({
+                fill: i % 3 === 0 ? "color-mix(in srgb, #ca8a04 55%, transparent)" : fade(55 * k),
+                "--from": "-30deg",
+                "--to": "40deg",
+                animation: `sway ${r(2.5 + seeded(i, 16) * 2)}s ease-in-out infinite alternate`,
+              })}
+            >
+              <path d={LEAF} />
+            </svg>
+          </span>
+        );
+      })}
     </div>
   );
 }
 
-function Sakura() {
+function Sakura({ level, contained }: SceneProps) {
+  const k = STRENGTH[level];
   return (
-    <div className="absolute inset-0" style={{ backgroundImage: `linear-gradient(160deg, ${tint(14)}, var(--bg) 55%)` }}>
-      {Array.from({ length: 22 }, (_, i) => {
-        const size = r(9 + seeded(i, 21) * 9);
+    <div className="absolute inset-0" style={{ backgroundImage: `linear-gradient(160deg, ${tint(14 * k)}, var(--bg) 55%)` }}>
+      {Array.from({ length: count(22, level) }, (_, i) => {
+        const size = r((9 + seeded(i, 21) * 9) * (contained ? 0.75 : 1));
         return (
           <span
             key={i}
@@ -247,7 +287,7 @@ function Sakura() {
                 width: size,
                 height: r(size * 0.75),
                 borderRadius: "150% 0 150% 0",
-                backgroundImage: `linear-gradient(135deg, color-mix(in srgb, #fbcfe8 90%, transparent), ${fade(60)})`,
+                backgroundImage: `linear-gradient(135deg, color-mix(in srgb, #fbcfe8 90%, transparent), ${fade(60 * k)})`,
                 "--from": "-50deg",
                 "--to": "70deg",
                 animation: `sway ${r(1.8 + seeded(i, 26) * 1.6)}s ease-in-out infinite alternate`,
@@ -260,28 +300,30 @@ function Sakura() {
   );
 }
 
-function Aurora() {
+function Aurora({ level, contained }: SceneProps) {
+  const k = STRENGTH[level];
   return (
     <div className="absolute inset-0" style={{ backgroundColor: "var(--bg)" }}>
       {[
-        { color: "#10b981", top: "-8%", d: 16, o: 0.4 },
-        { color: "#6366f1", top: "6%", d: 22, o: 0.35 },
-        { color: "#ec4899", top: "18%", d: 19, o: 0.25 },
+        { color: "var(--scene-1)", top: "-8%", d: 16, o: 0.4 },
+        { color: "var(--scene-2)", top: "6%", d: 22, o: 0.35 },
+        { color: "var(--scene-3)", top: "18%", d: 19, o: 0.25 },
       ].map((band, i) => (
         <span
           key={i}
-          className="absolute -inset-x-1/4 h-[38vh] rounded-[50%]"
+          className="absolute -inset-x-1/4 rounded-[50%]"
           style={{
             top: band.top,
-            opacity: band.o,
+            height: contained ? "45%" : "38vh",
+            opacity: Math.min(1, r(band.o * k)),
             backgroundImage: `linear-gradient(90deg, transparent, ${band.color}, transparent)`,
-            filter: "blur(48px)",
+            filter: `blur(${contained ? 20 : 48}px)`,
             animation: `aurora ${band.d}s ease-in-out infinite alternate`,
             animationDelay: `${-i * 4}s`,
           }}
         />
       ))}
-      {Array.from({ length: 40 }, (_, i) => (
+      {Array.from({ length: count(40, level) }, (_, i) => (
         <span
           key={i}
           className="absolute size-0.5 rounded-full"

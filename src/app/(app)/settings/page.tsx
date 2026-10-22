@@ -5,7 +5,8 @@ import { ChannelPanel, type ChannelView } from "@/components/channel-settings";
 import { ReminderSettingsForm } from "@/components/reminder-settings";
 import { SleepPhoneLink, SleepScheduleForm } from "@/components/sleep-settings";
 import { ShareProfile } from "@/components/share-panel";
-import { SkinPicker, ThemePicker } from "@/components/theme-toggle";
+import { SkinSettings } from "@/components/skin-settings";
+import { ThemePicker } from "@/components/theme-toggle";
 import { Card, CardHeader, PageHeader } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { channelState } from "@/lib/channels";
@@ -13,20 +14,20 @@ import { loadChannels, loadReminderSettings, loadShareable, loadSleepSettings } 
 import { BOT_KINDS } from "@/lib/messaging/bots";
 import { botTokens, botUsernames } from "@/lib/messaging/config";
 import { loadBackground } from "@/lib/profile";
-import { loadSkin, loadTheme } from "@/lib/theme-server";
+import { loadAppearance, loadTheme } from "@/lib/theme-server";
 
 export const metadata: Metadata = { title: "تنظیمات" };
 
 export default async function SettingsPage() {
   const user = await requireUser();
-  const [{ background }, channels, sleep, reminders, theme, shareable, skin] = await Promise.all([
+  const [{ background }, channels, sleep, reminders, theme, shareable, look] = await Promise.all([
     loadBackground(user.id),
     loadChannels(user.id),
     loadSleepSettings(user.id),
     loadReminderSettings(user.id),
     loadTheme(),
     loadShareable(user.id),
-    loadSkin(),
+    loadAppearance(),
   ]);
 
   // Only messengers whose bot is configured on this server are offered.
@@ -58,10 +59,10 @@ export default async function SettingsPage() {
 
       <Card id="skins">
         <CardHeader
-          title="پوستهٔ ویژه"
-          subtitle="رنگ‌ها و یک پس‌زمینهٔ متحرک؛ در حالت روشن و تیره کار می‌کند. پوسته جای پس‌زمینهٔ انتخابی شما را می‌گیرد."
+          title="پوسته و تم شخصی"
+          subtitle="یکی از پوسته‌های آماده را انتخاب کنید یا تم خودتان را با رنگ و پس‌زمینهٔ متحرک دلخواه بسازید."
         />
-        <SkinPicker initial={skin} />
+        <SkinSettings initialActive={look.active} initialCustoms={look.customs} />
       </Card>
 
       <Card>
