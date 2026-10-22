@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
+import { SKIN_INFO, skinCookie, SKINS, type Skin } from "@/lib/skins";
 import { THEME_LABELS, THEMES, themeAttribute, themeCookie, type Theme } from "@/lib/theme";
 import { Monitor, Moon, Sun } from "./icons";
 import { cx } from "./ui";
@@ -117,6 +118,56 @@ export function ThemePicker({ initial }: { initial: Theme }) {
           >
             <Icon />
             {THEME_LABELS[t]}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// Applies a skin at once (the scene follows <html data-skin>) and remembers it.
+function applySkin(skin: Skin | null) {
+  if (skin) document.documentElement.dataset.skin = skin;
+  else delete document.documentElement.dataset.skin;
+  document.cookie = skinCookie(skin);
+}
+
+// Settings: the special skins, or none. A tap applies it at once and keeps it.
+export function SkinPicker({ initial }: { initial: Skin | null }) {
+  const [skin, setSkin] = useState(initial);
+  function choose(next: Skin | null) {
+    applySkin(next);
+    setSkin(next);
+  }
+  const options: (Skin | null)[] = [null, ...SKINS];
+  return (
+    <div role="radiogroup" aria-label="پوستهٔ ویژه" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      {options.map((option) => {
+        const info = option ? SKIN_INFO[option] : null;
+        const checked = skin === option;
+        return (
+          <button
+            key={option ?? "none"}
+            type="button"
+            role="radio"
+            aria-checked={checked}
+            onClick={() => choose(option)}
+            className={cx(
+              "overflow-hidden rounded-xl border text-start transition-[border-color,box-shadow]",
+              checked ? "border-accent ring-2 ring-accent/30" : "border-line hover:border-muted",
+            )}
+          >
+            <span
+              aria-hidden
+              className="block h-14 w-full"
+              style={{ background: info ? info.swatch : "var(--surface-2)" }}
+            />
+            <span className="block px-2.5 py-2">
+              <span className="block text-sm font-bold">{info ? info.label : "بدون پوسته"}</span>
+              <span className="block text-xs leading-5 text-muted">
+                {info ? info.description : "رنگ‌های ساده و پس‌زمینهٔ خودتان"}
+              </span>
+            </span>
           </button>
         );
       })}

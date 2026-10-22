@@ -83,6 +83,166 @@ body {
   color: var(--fg);
 }
 
+/* ---- Special skins (src/lib/skins.ts): accents for light and dark, and the scene layer ---- */
+:root {
+  /* stars and sparkles in skin scenes: dark ink by day, warm light at night */
+  --scene-star: color-mix(in srgb, var(--accent) 70%, transparent);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --scene-star: #fef3c7;
+  }
+}
+:root[data-theme="dark"] {
+  --scene-star: #fef3c7;
+}
+
+:root[data-skin="ocean"] {
+  --accent: #0369a1;
+  --accent-soft: #e0f2fe;
+  --accent-fg: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-skin="ocean"]:not([data-theme="light"]) {
+    --accent: #38bdf8;
+    --accent-soft: #0c3a52;
+    --accent-fg: #04202f;
+  }
+}
+:root[data-skin="ocean"][data-theme="dark"] {
+  --accent: #38bdf8;
+  --accent-soft: #0c3a52;
+  --accent-fg: #04202f;
+}
+
+:root[data-skin="galaxy"] {
+  --accent: #6d28d9;
+  --accent-soft: #ede9fe;
+  --accent-fg: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-skin="galaxy"]:not([data-theme="light"]) {
+    --accent: #a78bfa;
+    --accent-soft: #2e1f5e;
+    --accent-fg: #160b33;
+  }
+}
+:root[data-skin="galaxy"][data-theme="dark"] {
+  --accent: #a78bfa;
+  --accent-soft: #2e1f5e;
+  --accent-fg: #160b33;
+}
+
+:root[data-skin="forest"] {
+  --accent: #15803d;
+  --accent-soft: #dcfce7;
+  --accent-fg: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-skin="forest"]:not([data-theme="light"]) {
+    --accent: #4ade80;
+    --accent-soft: #133d24;
+    --accent-fg: #052e16;
+  }
+}
+:root[data-skin="forest"][data-theme="dark"] {
+  --accent: #4ade80;
+  --accent-soft: #133d24;
+  --accent-fg: #052e16;
+}
+
+:root[data-skin="sakura"] {
+  --accent: #be185d;
+  --accent-soft: #fce7f3;
+  --accent-fg: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-skin="sakura"]:not([data-theme="light"]) {
+    --accent: #f472b6;
+    --accent-soft: #4a1730;
+    --accent-fg: #2d0a1b;
+  }
+}
+:root[data-skin="sakura"][data-theme="dark"] {
+  --accent: #f472b6;
+  --accent-soft: #4a1730;
+  --accent-fg: #2d0a1b;
+}
+
+:root[data-skin="aurora"] {
+  --accent: #047857;
+  --accent-soft: #d1fae5;
+  --accent-fg: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-skin="aurora"]:not([data-theme="light"]) {
+    --accent: #34d399;
+    --accent-soft: #0f3b2e;
+    --accent-fg: #022c22;
+  }
+}
+:root[data-skin="aurora"][data-theme="dark"] {
+  --accent: #34d399;
+  --accent-soft: #0f3b2e;
+  --accent-fg: #022c22;
+}
+
+/* a skin's scene replaces the custom background while it's on */
+:root[data-skin] .app-background {
+  display: none;
+}
+
+@keyframes wave-drift {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes rise {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-105vh) translateX(var(--drift, 20px));
+    opacity: 0;
+  }
+}
+@keyframes fall {
+  0% {
+    transform: translateY(-10vh) translateX(0);
+  }
+  100% {
+    transform: translateY(110vh) translateX(var(--drift, 60px));
+  }
+}
+@keyframes sway {
+  from {
+    transform: rotate(var(--from, -25deg)) rotateY(0deg);
+  }
+  to {
+    transform: rotate(var(--to, 35deg)) rotateY(160deg);
+  }
+}
+@keyframes ray {
+  from {
+    opacity: 0.15;
+  }
+  to {
+    opacity: 0.45;
+  }
+}
+@keyframes aurora {
+  0% {
+    transform: translateX(-12%) skewX(-12deg) scaleY(1);
+  }
+  100% {
+    transform: translateX(12%) skewX(14deg) scaleY(1.35);
+  }
+}
+
 /* ---- Motion (src/components: task checklist, day ring, suggestions, calendar, timeline) ---- */
 
 /* the drawn tick of a task checkbox */

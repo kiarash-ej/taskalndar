@@ -1,19 +1,25 @@
 import Link from "next/link";
 import { AppBackground } from "@/components/app-background";
 import { MainNav } from "@/components/main-nav";
+import { SkinScene } from "@/components/skin-scene";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { buttonClass } from "@/components/ui";
 import { signOut } from "@/lib/actions/auth";
 import { requireUser } from "@/lib/auth";
 import { loadBackground } from "@/lib/profile";
-import { loadTheme } from "@/lib/theme-server";
+import { loadSkin, loadTheme } from "@/lib/theme-server";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const user = await requireUser();
-  const [{ background, imageUrl }, theme] = await Promise.all([loadBackground(user.id), loadTheme()]);
+  const [{ background, imageUrl }, theme, skin] = await Promise.all([
+    loadBackground(user.id),
+    loadTheme(),
+    loadSkin(),
+  ]);
   return (
     <>
       <AppBackground background={background} imageUrl={imageUrl} />
+      <SkinScene initial={skin} />
       <header className="sticky top-0 z-10 border-b border-line bg-bg/90 backdrop-blur">
         <div className="mx-auto max-w-5xl space-y-2 px-4 py-3">
           <div className="flex items-center justify-between gap-3">
