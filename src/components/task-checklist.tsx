@@ -83,6 +83,23 @@ export function TaskChecklist({
   );
 }
 
+const SPARK_COLORS = ["var(--accent)", "var(--sun)", "var(--up)", "var(--down)"];
+
+// A small burst of sparks out of a checkbox that was just ticked.
+function burst(host: HTMLElement | null) {
+  if (!host || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  for (let i = 0; i < 10; i++) {
+    const spark = document.createElement("i");
+    const angle = (Math.PI * 2 * i) / 10;
+    spark.className = "spark";
+    spark.style.cssText =
+      `left:7px;top:7px;background:${SPARK_COLORS[i % SPARK_COLORS.length]};` +
+      `--dx:${Math.cos(angle) * 30}px;--dy:${Math.sin(angle) * 24}px`;
+    spark.addEventListener("animationend", () => spark.remove());
+    host.appendChild(spark);
+  }
+}
+
 function TaskItem({
   task,
   day,
@@ -129,22 +146,40 @@ function TaskItem({
 
   return (
     <li className={cx("flex items-center gap-3 py-2.5", deleting && "opacity-50")}>
-      <input
-        id={checkboxId}
-        type="checkbox"
-        checked={done}
-        disabled={!canTick || deleting}
-        onChange={(e) => onToggle(e.target.checked)}
-        className="size-5 shrink-0 cursor-pointer accent-accent disabled:cursor-not-allowed"
-      />
+      <span className="relative grid size-5 shrink-0 place-items-center">
+        <input
+          id={checkboxId}
+          type="checkbox"
+          checked={done}
+          disabled={!canTick || deleting}
+          onChange={(e) => {
+            if (e.target.checked) burst(e.currentTarget.parentElement);
+            onToggle(e.target.checked);
+          }}
+          className={cx(
+            "peer size-5 cursor-pointer appearance-none rounded-md border-2 border-line bg-surface transition-colors",
+            "checked:border-accent checked:bg-accent disabled:cursor-not-allowed disabled:opacity-60",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
+          )}
+        />
+        <svg
+          viewBox="0 0 16 16"
+          aria-hidden
+          className="check-draw pointer-events-none absolute size-3.5 fill-none stroke-accent-fg"
+          strokeWidth={3}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M3 8.5l3.2 3L13 4.5" />
+        </svg>
+      </span>
       <label
         htmlFor={checkboxId}
-        className={cx(
-          "min-w-0 flex-1 cursor-pointer break-words",
-          done && "text-muted line-through decoration-muted/60",
-        )}
+        className={cx("min-w-0 flex-1 cursor-pointer break-words", done && "text-muted")}
       >
-        {task.title}
+        <span className="strike" data-done={done}>
+          {task.title}
+        </span>
       </label>
       <span
         className={cx(

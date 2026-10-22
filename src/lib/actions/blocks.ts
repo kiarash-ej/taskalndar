@@ -97,6 +97,32 @@ export async function deleteBlock(blockId: string): Promise<{ error?: string }> 
   return {};
 }
 
+// New times for a block dragged on the timeline, once the user confirms them.
+// Minutes since the day's Tehran midnight; nothing else about the block changes.
+export async function moveBlock(
+  blockId: string,
+  day: string,
+  start: number,
+  end: number,
+): Promise<{ error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { error: SIGNED_OUT };
+  if (!isIsoDate(day) || !Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end <= start || end > MINUTES_PER_DAY) {
+    return { error: GENERIC_ERROR };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("time_blocks")
+    .update({ start_at: clockToInstant(day, start), end_at: clockToInstant(day, end) })
+    .eq("id", blockId)
+    .eq("day", day);
+  if (error) return { error: GENERIC_ERROR };
+
+  refresh();
+  return {};
+}
+
 export interface SuggestedBlock {
   title: string;
   // minutes since the day's Tehran midnight

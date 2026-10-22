@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from "@/components/icons";
 import { ArrangeSuggestions } from "@/components/arrange-suggestions";
 import { DailyNote } from "@/components/daily-note";
 import { JalaliCalendar } from "@/components/jalali-calendar";
+import { NextBlock } from "@/components/next-block";
 import { NewTaskForm } from "@/components/new-task-form";
 import { TaskChecklist } from "@/components/task-checklist";
 import { DayBlocks } from "@/components/time-blocks";
@@ -81,6 +82,12 @@ export default async function PlannerPage({ searchParams }: PageProps<"/planner"
               <ChevronLeft />
             </Link>
           </div>
+
+          {day === today && (
+            <div className="mb-4 empty:hidden">
+              <NextBlock blocks={blocks} />
+            </div>
+          )}
 
           {taskPercent !== null && (
             <div className="mb-4 space-y-1.5">

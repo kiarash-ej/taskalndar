@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { DayRing } from "@/components/day-ring";
+import { NextBlock } from "@/components/next-block";
 import { MonthlyChangeBadge, ScoreSummary } from "@/components/progress-widgets";
 import { TaskChecklist } from "@/components/task-checklist";
+import { WeekBars } from "@/components/week-bars";
 import { Card, CardHeader, PageHeader } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
-import { loadProgressData } from "@/lib/data";
-import { jalaliMonthOf, shiftJalaliMonth, todayIso } from "@/lib/dates";
+import { loadProgressData, loadTimeBlocks } from "@/lib/data";
+import { eachDay, jalaliMonthOf, shiftJalaliMonth, todayIso } from "@/lib/dates";
 import { formatDayMonth, formatLongDate, formatPercent, JALALI_MONTH_NAMES } from "@/lib/format";
 import {
   compareWithPreviousMonth,
@@ -22,12 +25,21 @@ export default async function DashboardPage() {
   const today = todayIso();
   const week = jalaliWeekRange(today);
 
-  const data = await loadProgressData(user.id, scoringWindowStart(today, 1, 2), today);
+  const [data, todayBlocks] = await Promise.all([
+    loadProgressData(user.id, scoringWindowStart(today, 1, 2), today),
+    loadTimeBlocks(user.id, today, today),
+  ]);
   const weekScore = scorePeriod(data, week.start, week.end, today);
   const { current, previous, change } = compareWithPreviousMonth(data, today);
 
   const todayTasks = tasksForDay(data.tasks, today);
   const doneToday = data.completions.filter((c) => c.done && c.date === today).map((c) => c.task_id);
+  const doneTodayCount = todayTasks.filter((t) => doneToday.includes(t.id)).length;
+  const weekDays = eachDay(week.start, week.end).map((day) => ({
+    day,
+    future: day > today,
+    percent: day > today ? null : scorePeriod(data, day, day, today).taskPercent,
+  }));
 
   const thisMonth = jalaliMonthOf(today);
   const thisMonthName = JALALI_MONTH_NAMES[thisMonth.jm - 1];
@@ -37,6 +49,10 @@ export default async function DashboardPage() {
     <div>
       <PageHeader title="داشبورد" subtitle={`امروز ${formatLongDate(today)}`} />
 
+      <div className="mb-4 empty:hidden">
+        <NextBlock blocks={todayBlocks} />
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader
@@ -44,6 +60,9 @@ export default async function DashboardPage() {
             subtitle={`${formatDayMonth(week.start)} تا ${formatDayMonth(week.end)}`}
           />
           <ScoreSummary score={weekScore} label="امتیاز پیشرفت این هفته" />
+          <div className="mt-4 border-t border-line pt-4">
+            <WeekBars days={weekDays} today={today} />
+          </div>
         </Card>
 
         <Card>
@@ -76,20 +95,25 @@ export default async function DashboardPage() {
               </Link>
             }
           />
-          <TaskChecklist
-            day={today}
-            today={today}
-            tasks={todayTasks}
-            doneIds={doneToday}
-            empty={
-              <p className="rounded-xl bg-surface-2 px-4 py-6 text-center text-sm text-muted">
-                برای امروز کاری ندارید.{" "}
-                <Link href={`/planner?date=${today}`} className="font-semibold text-accent hover:underline">
-                  کار تازه‌ای اضافه کنید
-                </Link>
-              </p>
-            }
-          />
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+            {todayTasks.length > 0 && <DayRing done={doneTodayCount} total={todayTasks.length} />}
+            <div className="min-w-0 flex-1">
+              <TaskChecklist
+                day={today}
+                today={today}
+                tasks={todayTasks}
+                doneIds={doneToday}
+                empty={
+                  <p className="rounded-xl bg-surface-2 px-4 py-6 text-center text-sm text-muted">
+                    برای امروز کاری ندارید.{" "}
+                    <Link href={`/planner?date=${today}`} className="font-semibold text-accent hover:underline">
+                      کار تازه‌ای اضافه کنید
+                    </Link>
+                  </p>
+                }
+              />
+            </div>
+          </div>
         </Card>
       </div>
     </div>

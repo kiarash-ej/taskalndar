@@ -19,6 +19,7 @@ import { formatLead } from "@/lib/reminders";
 import { formatInstantClock, type SleepSuggestion } from "@/lib/sleep";
 import type { BlockRow } from "@/lib/report";
 import { BlockForm } from "./block-form";
+import { BlockTimeline } from "./block-timeline";
 import { Bell, Moon, Pencil, Trash } from "./icons";
 import { SubmitButton } from "./submit-button";
 import { buttonClass, cx, FormMessage, iconButtonClass, inputClass } from "./ui";
@@ -51,6 +52,9 @@ export function DayBlocks({
 }) {
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // blocks already here when the page opened don't animate; new ones pop in
+  const [initialIds] = useState(() => new Set(blocks.map((b) => b.id)));
+  const [view, setView] = useState<"list" | "timeline">("list");
 
   return (
     <div className="space-y-4">
@@ -68,7 +72,34 @@ export function DayBlocks({
         </ul>
       )}
 
-      {blocks.length === 0 ? (
+      {blocks.length > 0 && (
+        <div role="radiogroup" aria-label="نمایش جعبه‌ها" className="flex gap-1 rounded-xl bg-surface-2 p-1 text-sm">
+          {(
+            [
+              ["list", "فهرست"],
+              ["timeline", "نمای زمانی"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={view === value}
+              onClick={() => setView(value)}
+              className={cx(
+                "flex-1 rounded-lg px-3 py-1 font-medium transition-colors",
+                view === value ? "bg-surface text-accent shadow-sm" : "text-muted hover:text-fg",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {blocks.length > 0 && view === "timeline" ? (
+        <BlockTimeline day={day} blocks={blocks} onError={setError} />
+      ) : blocks.length === 0 ? (
         sleepSuggestions.length === 0 && <p className="rounded-xl bg-surface-2 px-4 py-6 text-center text-sm text-muted">
           برای این روز جعبه‌ای نیست. یک بازهٔ زمانی اضافه کنید یا تمپلیتی را اعمال کنید.
         </p>
@@ -77,6 +108,7 @@ export function DayBlocks({
           {blocks.map((block) => (
             <BlockItem
               key={block.id}
+              fresh={!initialIds.has(block.id)}
               day={day}
               block={block}
               suggestions={suggestions}
@@ -132,14 +164,20 @@ function SleepSuggestionItem({
 }) {
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
+  // the answer's animation plays first: "yes" flies into the plan, "no" folds away
+  const [leaving, setLeaving] = useState<"fly" | "fold" | null>(null);
   const nightName = `${WEEKDAY_NAMES[weekdayIndex(suggestion.night)]} شب`;
   const span = `${formatInstantClock(new Date(suggestion.bedAt))} تا ${formatInstantClock(new Date(suggestion.wakeAt))}`;
 
-  function run(task: () => Promise<{ error?: string }>) {
+  function run(task: () => Promise<{ error?: string }>, exit: "fly" | "fold") {
     onError(null);
+    setLeaving(exit);
     startTransition(async () => {
-      const result = await task();
-      if (result.error) onError(result.error);
+      const [result] = await Promise.all([task(), new Promise((r) => setTimeout(r, 420))]);
+      if (result.error) {
+        setLeaving(null);
+        onError(result.error);
+      }
     });
   }
 
@@ -147,7 +185,8 @@ function SleepSuggestionItem({
     <li
       className={cx(
         "space-y-2 rounded-xl border border-dashed border-accent/50 bg-accent-soft/40 px-3 py-2.5",
-        pending && "opacity-60",
+        leaving === "fly" ? "anim-fly" : leaving === "fold" ? "anim-fold" : "anim-enter",
+        pending && !leaving && "opacity-60",
       )}
     >
       <div className="flex items-start gap-2">
@@ -165,14 +204,14 @@ function SleepSuggestionItem({
           defaultWake={clockOfInstant(suggestion.wakeAt)}
           pending={pending}
           onCancel={() => setEditing(false)}
-          onSubmit={(times) => run(() => acceptSleepSuggestion(suggestion.night, times))}
+          onSubmit={(times) => run(() => acceptSleepSuggestion(suggestion.night, times), "fly")}
         />
       ) : (
         <div className="flex flex-wrap gap-1.5">
           <button
             type="button"
             disabled={pending}
-            onClick={() => run(() => acceptSleepSuggestion(suggestion.night))}
+            onClick={() => run(() => acceptSleepSuggestion(suggestion.night), "fly")}
             className={cx(buttonClass.primary, "px-3 py-1")}
           >
             بله، ثبت شود
@@ -188,7 +227,7 @@ function SleepSuggestionItem({
           <button
             type="button"
             disabled={pending}
-            onClick={() => run(() => skipSleepSuggestion(suggestion.night, suggestion.from))}
+            onClick={() => run(() => skipSleepSuggestion(suggestion.night, suggestion.from), "fold")}
             className={cx(buttonClass.ghost, "px-3 py-1")}
           >
             نه
@@ -279,12 +318,14 @@ function OwnSleep({ day, onError }: { day: IsoDate; onError: (error: string | nu
 }
 
 function BlockItem({
+  fresh,
   day,
   block,
   suggestions,
   defaultLead,
   onError,
 }: {
+  fresh: boolean;
   day: IsoDate;
   block: BlockRow;
   suggestions: string[];
@@ -337,7 +378,7 @@ function BlockItem({
   }
 
   return (
-    <li className={cx("flex gap-3 py-3", pending && "opacity-60")}>
+    <li className={cx("flex gap-3 py-3", fresh && "anim-pop", pending && "opacity-60")}>
       <input
         id={checkboxId}
         type="checkbox"

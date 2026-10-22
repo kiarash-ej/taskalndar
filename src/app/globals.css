@@ -14,6 +14,11 @@
   --up-soft: #dcfce7;
   --down: #be123c;
   --down-soft: #ffe4e6;
+  /* the day/night switch (theme-toggle.tsx) */
+  --sky-day: linear-gradient(135deg, #bae6fd, #fef3c7);
+  --sky-night: linear-gradient(135deg, #1e1b4b, #312e81);
+  --sun: #f59e0b;
+  --star: #fef3c7;
   /* native controls (time pickers, scrollbars) follow the theme too */
   color-scheme: light;
 }
@@ -76,4 +81,161 @@
 body {
   background: var(--bg);
   color: var(--fg);
+}
+
+/* ---- Motion (src/components: task checklist, day ring, suggestions, calendar, timeline) ---- */
+
+/* the drawn tick of a task checkbox */
+.check-draw {
+  stroke-dasharray: 20;
+  stroke-dashoffset: 20;
+  transition: stroke-dashoffset 0.3s 0.08s ease-out;
+}
+.peer:checked ~ .check-draw,
+.peer:checked + .check-draw {
+  stroke-dashoffset: 0;
+}
+
+/* a line drawn through a finished task, right to left */
+.strike {
+  position: relative;
+}
+.strike::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 55%;
+  height: 1.5px;
+  background: var(--muted);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.35s ease-out;
+}
+.strike[data-done="true"]::after {
+  transform: scaleX(1);
+}
+
+/* sparks flying out of a ticked checkbox */
+.spark {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  pointer-events: none;
+  animation: spark 0.7s ease-out forwards;
+}
+@keyframes spark {
+  to {
+    transform: translate(var(--dx), var(--dy)) rotate(220deg);
+    opacity: 0;
+  }
+}
+
+/* suggestions: arrive, fly into the plan on "yes", fold away on "no" */
+.anim-enter {
+  animation: enter 0.45s cubic-bezier(0.3, 1.3, 0.5, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.97);
+  }
+}
+.anim-fly {
+  animation: fly 0.45s cubic-bezier(0.6, 0, 0.3, 1) forwards;
+}
+@keyframes fly {
+  to {
+    opacity: 0;
+    transform: translateY(48px) scale(0.92);
+  }
+}
+.anim-fold {
+  transform-origin: top;
+  animation: fold 0.35s ease-in forwards;
+}
+@keyframes fold {
+  to {
+    opacity: 0;
+    transform: scaleY(0.2);
+  }
+}
+.anim-pop {
+  animation: pop 0.4s cubic-bezier(0.3, 1.6, 0.5, 1) backwards;
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+}
+
+/* the Jalali calendar's month sliding in from the side it came from */
+.slide-from-left {
+  animation: slide-from-left 0.4s cubic-bezier(0.3, 1, 0.4, 1);
+}
+.slide-from-right {
+  animation: slide-from-right 0.4s cubic-bezier(0.3, 1, 0.4, 1);
+}
+@keyframes slide-from-left {
+  from {
+    opacity: 0;
+    transform: translateX(-40%);
+  }
+}
+@keyframes slide-from-right {
+  from {
+    opacity: 0;
+    transform: translateX(40%);
+  }
+}
+
+/* the bell of the next block, ringing when it starts */
+.bell-ring {
+  transform-origin: 50% 10%;
+  animation: bell 0.8s ease-in-out 2;
+}
+@keyframes bell {
+  20%,
+  60% {
+    rotate: 16deg;
+  }
+  40%,
+  80% {
+    rotate: -16deg;
+  }
+}
+
+/* this week's day bars growing in turn */
+.bar-grow {
+  transform-origin: bottom;
+  animation: bar-grow 0.7s cubic-bezier(0.3, 1.4, 0.5, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+@keyframes bar-grow {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+/* stars of the night switch */
+@keyframes twinkle {
+  to {
+    opacity: 0.25;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .spark {
+    display: none;
+  }
 }

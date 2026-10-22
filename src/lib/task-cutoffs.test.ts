@@ -213,5 +213,6 @@ describe("the migration", () => {
     } finally {
       await before.close();
     }
-  });
+    // builds a second database from every migration, slow under a full parallel run
+  }, 30_000);
 });

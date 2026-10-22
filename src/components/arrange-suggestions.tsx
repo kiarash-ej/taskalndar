@@ -119,12 +119,16 @@ export function ArrangeSuggestions({
 
       {items.length > 0 && (
         <ul className="divide-y divide-line">
-          {items.map((item) => {
+          {items.map((item, index) => {
             const placement = placed.find((p) => p.id === item.id);
             const excluded = left.has(item.id);
             const isOwn = item.id.startsWith("own-");
             return (
-              <li key={item.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5">
+              <li
+                key={item.id}
+                className="anim-enter flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5"
+                style={{ ["--i" as string]: index }}
+              >
                 <div className="flex min-w-48 flex-1 items-center gap-3">
                 <input
                   type="checkbox"
