@@ -28,6 +28,12 @@ export function JalaliCalendar({
   basePath?: string;
 }) {
   const [month, setMonth] = useState(() => jalaliMonthOf(selected));
+  // which way the last month change went, so the new month slides in from that side
+  const [direction, setDirection] = useState<"next" | "prev" | null>(null);
+  const go = (delta: number) => {
+    setDirection(delta > 0 ? "next" : "prev");
+    setMonth((m) => shiftJalaliMonth(m, delta));
+  };
   const { start } = jalaliMonthRange(month);
   const leadingBlanks = weekdayIndex(start);
   const days = Array.from({ length: jalaaliMonthLength(month.jy, month.jm) }, (_, i) =>
@@ -37,11 +43,11 @@ export function JalaliCalendar({
   const showingToday = month.jy === todayMonth.jy && month.jm === todayMonth.jm;
 
   return (
-    <div>
+    <div className="overflow-hidden">
       <div className="mb-3 flex items-center justify-between">
         <button
           type="button"
-          onClick={() => setMonth((m) => shiftJalaliMonth(m, -1))}
+          onClick={() => go(-1)}
           className={iconButtonClass}
           aria-label="ماه قبل"
         >
@@ -52,7 +58,7 @@ export function JalaliCalendar({
         </h2>
         <button
           type="button"
-          onClick={() => setMonth((m) => shiftJalaliMonth(m, 1))}
+          onClick={() => go(1)}
           className={iconButtonClass}
           aria-label="ماه بعد"
         >
@@ -60,7 +66,15 @@ export function JalaliCalendar({
         </button>
       </div>
 
-      <div className="grid grid-cols-7 gap-1 text-center">
+      <div
+        // a new key per month replays the slide; in RTL the next month comes from the left
+        key={`${month.jy}-${month.jm}`}
+        className={cx(
+          "grid grid-cols-7 gap-1 text-center",
+          direction === "next" && "slide-from-left",
+          direction === "prev" && "slide-from-right",
+        )}
+      >
         {WEEKDAY_INITIALS.map((initial, i) => (
           <abbr
             key={initial}
@@ -101,7 +115,10 @@ export function JalaliCalendar({
         <div className="mt-3 text-center">
           <Link
             href={`${basePath}?date=${today}`}
-            onClick={() => setMonth(todayMonth)}
+            onClick={() => {
+              setDirection(null);
+              setMonth(todayMonth);
+            }}
             className="text-sm font-semibold text-accent hover:underline"
           >
             برو به امروز

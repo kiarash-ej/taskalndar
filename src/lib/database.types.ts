@@ -253,6 +253,120 @@ export type Database = {
         }
         Relationships: []
       }
+      reminder_settings: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          include_sleep: boolean
+          lead_minutes: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          include_sleep?: boolean
+          lead_minutes?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          include_sleep?: boolean
+          lead_minutes?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sleep_proposals: {
+        Row: {
+          bed_at: string
+          created_at: string
+          night: string
+          user_id: string
+          wake_at: string
+        }
+        Insert: {
+          bed_at: string
+          created_at?: string
+          night: string
+          user_id: string
+          wake_at: string
+        }
+        Update: {
+          bed_at?: string
+          created_at?: string
+          night?: string
+          user_id?: string
+          wake_at?: string
+        }
+        Relationships: []
+      }
+      sleep_schedules: {
+        Row: {
+          bedtime: string
+          created_at: string
+          user_id: string
+          wake_time: string
+          weekday: number
+        }
+        Insert: {
+          bedtime: string
+          created_at?: string
+          user_id: string
+          wake_time: string
+          weekday: number
+        }
+        Update: {
+          bedtime?: string
+          created_at?: string
+          user_id?: string
+          wake_time?: string
+          weekday?: number
+        }
+        Relationships: []
+      }
+      sleep_settings: {
+        Row: {
+          created_at: string
+          hook_token_hash: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          hook_token_hash?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          hook_token_hash?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sleep_skips: {
+        Row: {
+          created_at: string
+          night: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          night: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          night?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       task_completions: {
         Row: {
           date: string
@@ -292,6 +406,7 @@ export type Database = {
           date: string
           id: string
           is_recurring: boolean
+          replaced_by: string | null
           title: string
           user_id: string
           weekdays: number[] | null
@@ -302,6 +417,7 @@ export type Database = {
           date?: string
           id?: string
           is_recurring?: boolean
+          replaced_by?: string | null
           title: string
           user_id: string
           weekdays?: number[] | null
@@ -312,6 +428,7 @@ export type Database = {
           date?: string
           id?: string
           is_recurring?: boolean
+          replaced_by?: string | null
           title?: string
           user_id?: string
           weekdays?: number[] | null
@@ -328,6 +445,10 @@ export type Database = {
           done: boolean
           end_at: string
           id: string
+          remind: boolean
+          reminded_at: string | null
+          reminder_minutes: number | null
+          sleep_night: string | null
           source: string
           start_at: string
           tags: string[]
@@ -345,6 +466,10 @@ export type Database = {
           done?: boolean
           end_at: string
           id?: string
+          remind?: boolean
+          reminded_at?: string | null
+          reminder_minutes?: number | null
+          sleep_night?: string | null
           source?: string
           start_at: string
           tags?: string[]
@@ -362,6 +487,10 @@ export type Database = {
           done?: boolean
           end_at?: string
           id?: string
+          remind?: boolean
+          reminded_at?: string | null
+          reminder_minutes?: number | null
+          sleep_night?: string | null
           source?: string
           start_at?: string
           tags?: string[]
@@ -388,6 +517,10 @@ export type Database = {
           done: boolean
           end_at: string
           id: string
+          remind: boolean
+          reminded_at: string | null
+          reminder_minutes: number | null
+          sleep_night: string | null
           source: string
           start_at: string
           tags: string[]
@@ -403,10 +536,39 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      claim_due_reminders: {
+        Args: never
+        Returns: {
+          block_id: string
+          end_at: string
+          is_sleep: boolean
+          start_at: string
+          title: string
+          user_id: string
+        }[]
+      }
+      delete_future_task_chain: { Args: { p_task_id: string }; Returns: undefined }
+      delete_task: { Args: { p_task_id: string }; Returns: string }
       jalali_weekday: { Args: { d: string }; Returns: number }
       link_notification_channel: {
         Args: { p_chat_id: string; p_code: string; p_kind: string }
         Returns: boolean
+      }
+      save_sleep_schedule: {
+        Args: { p_bedtimes: string[]; p_wake_times: string[]; p_weekdays: number[] }
+        Returns: undefined
+      }
+      set_sleep_night: {
+        Args: { p_bed_at: string; p_night: string; p_user: string; p_wake_at: string }
+        Returns: undefined
+      }
+      sleep_minutes: {
+        Args: { p_bedtime: string; p_wake_time: string }
+        Returns: number
+      }
+      sleep_night_start: {
+        Args: { p_bedtime: string; p_night: string }
+        Returns: string
       }
       tags_are_canonical: { Args: { t: string[] }; Returns: boolean }
       unlink_notification_chat: {

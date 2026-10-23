@@ -1,16 +1,27 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "@/components/icons";
+import { ArrangeSuggestions } from "@/components/arrange-suggestions";
 import { DailyNote } from "@/components/daily-note";
 import { JalaliCalendar } from "@/components/jalali-calendar";
+import { NextBlock } from "@/components/next-block";
 import { NewTaskForm } from "@/components/new-task-form";
 import { TaskChecklist } from "@/components/task-checklist";
 import { DayBlocks } from "@/components/time-blocks";
 import { Card, CardHeader, iconButtonClass, ProgressBar } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
-import { loadDailyNote, loadProgressData, loadTemplates, loadTimeBlocks, loadUserTags } from "@/lib/data";
+import {
+  loadDailyNote,
+  loadProgressData,
+  loadReminderSettings,
+  loadSleepSuggestions,
+  loadTemplates,
+  loadTimeBlocks,
+  loadUserTags,
+} from "@/lib/data";
 import { addDays, isIsoDate, todayIso } from "@/lib/dates";
 import { faDigits, formatLongDate, formatPercent } from "@/lib/format";
+import { arrangeWindow } from "@/lib/arrange";
 import { scorePeriod, tasksForDay } from "@/lib/scoring";
 
 export const metadata: Metadata = { title: "برنامهٔ روزانه" };
@@ -21,16 +32,24 @@ export default async function PlannerPage({ searchParams }: PageProps<"/planner"
   const { date } = await searchParams;
   const day = isIsoDate(date) ? date : today;
 
-  const [data, noteBody, blocks, templates, tagSuggestions] = await Promise.all([
+  const [data, noteBody, blocks, templates, tagSuggestions, reminders, sleepSuggestions] = await Promise.all([
     loadProgressData(user.id, day, day),
     loadDailyNote(user.id, day),
     loadTimeBlocks(user.id, day, day),
     loadTemplates(user.id),
     loadUserTags(),
+    loadReminderSettings(user.id),
+    loadSleepSuggestions(user.id, day),
   ]);
   const tasks = tasksForDay(data.tasks, day);
   const doneIds = data.completions.filter((c) => c.done && c.date === day).map((c) => c.task_id);
   const { expectedTasks, doneTasks, taskPercent } = scorePeriod(data, day, day, today);
+  // tasks still to do that have no block of the same name on this day
+  const planned = new Set(blocks.map((b) => b.title.trim()));
+  const arrangeable = tasks
+    .filter((t) => !doneIds.includes(t.id) && !planned.has(t.title.trim()))
+    .map((t) => ({ id: t.id, title: t.title }));
+  const arrange = arrangeWindow(day, blocks, sleepSuggestions, new Date());
 
   const dayLabel =
     day === today ? "امروز" : day === addDays(today, -1) ? "دیروز" : day === addDays(today, 1) ? "فردا" : null;
@@ -63,6 +82,12 @@ export default async function PlannerPage({ searchParams }: PageProps<"/planner"
               <ChevronLeft />
             </Link>
           </div>
+
+          {day === today && (
+            <div className="mb-4 empty:hidden">
+              <NextBlock blocks={blocks} />
+            </div>
+          )}
 
           {taskPercent !== null && (
             <div className="mb-4 space-y-1.5">
@@ -103,8 +128,20 @@ export default async function PlannerPage({ searchParams }: PageProps<"/planner"
             blocks={blocks}
             suggestions={tagSuggestions}
             templates={templates.map((t) => ({ id: t.id, name: t.name, blockCount: t.blocks.length }))}
+            defaultLead={reminders?.enabled ? reminders.leadMinutes : null}
+            sleepSuggestions={sleepSuggestions}
           />
         </Card>
+
+        {arrange && (
+          <Card>
+            <CardHeader
+              title="پیشنهاد چیدن کارها"
+              subtitle="زمان پیشنهادی برای کارهای این روز در وقت خالی؛ تا ثبت نکنید چیزی تغییر نمی‌کند"
+            />
+            <ArrangeSuggestions day={day} tasks={arrangeable} window={arrange.window} busy={arrange.busy} />
+          </Card>
+        )}
 
         <Card>
           <CardHeader title="یادداشت روزانه" subtitle={`برای ${formatLongDate(day)}`} />

@@ -1,19 +1,34 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { BackgroundForm } from "@/components/background-form";
 import { ChannelPanel, type ChannelView } from "@/components/channel-settings";
+import { ReminderSettingsForm } from "@/components/reminder-settings";
+import { SleepPhoneLink, SleepScheduleForm } from "@/components/sleep-settings";
+import { ShareProfile } from "@/components/share-panel";
+import { SkinSettings } from "@/components/skin-settings";
+import { ThemePicker } from "@/components/theme-toggle";
 import { Card, CardHeader, PageHeader } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { channelState } from "@/lib/channels";
-import { loadChannels } from "@/lib/data";
+import { loadChannels, loadReminderSettings, loadShareable, loadSleepSettings } from "@/lib/data";
 import { BOT_KINDS } from "@/lib/messaging/bots";
 import { botTokens, botUsernames } from "@/lib/messaging/config";
 import { loadBackground } from "@/lib/profile";
+import { loadAppearance, loadTheme } from "@/lib/theme-server";
 
 export const metadata: Metadata = { title: "تنظیمات" };
 
 export default async function SettingsPage() {
   const user = await requireUser();
-  const [{ background }, channels] = await Promise.all([loadBackground(user.id), loadChannels(user.id)]);
+  const [{ background }, channels, sleep, reminders, theme, shareable, look] = await Promise.all([
+    loadBackground(user.id),
+    loadChannels(user.id),
+    loadSleepSettings(user.id),
+    loadReminderSettings(user.id),
+    loadTheme(),
+    loadShareable(user.id),
+    loadAppearance(),
+  ]);
 
   // Only messengers whose bot is configured on this server are offered.
   const tokens = botTokens();
@@ -33,10 +48,84 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="تنظیمات" subtitle="ظاهر برنامه و خلاصهٔ روزانه را به سلیقهٔ خودتان تنظیم کنید." />
+      <PageHeader title="تنظیمات" subtitle="ظاهر برنامه، یادآوری‌ها، برنامهٔ خواب و خلاصهٔ روزانه را به سلیقهٔ خودتان تنظیم کنید." />
+      <Card>
+        <CardHeader
+          title="حالت نمایش"
+          subtitle="روشن یا تیره؛ با «مثل دستگاه» از تنظیم گوشی یا کامپیوترتان پیروی می‌کند."
+        />
+        <ThemePicker initial={theme} />
+      </Card>
+
+      <Card id="skins">
+        <CardHeader
+          title="پوسته و تم شخصی"
+          subtitle="یکی از پوسته‌های آماده را انتخاب کنید یا تم خودتان را با رنگ و پس‌زمینهٔ متحرک دلخواه بسازید."
+        />
+        <SkinSettings initialActive={look.active} initialCustoms={look.customs} />
+      </Card>
+
       <Card>
         <CardHeader title="پس‌زمینه" subtitle="یک رنگ، گرادیان یا تصویر شخصی انتخاب کنید." />
         <BackgroundForm current={background} />
+      </Card>
+
+      <Card id="reminders">
+        <CardHeader
+          title="یادآوری کارها"
+          subtitle="چند دقیقه قبل از شروع هر جعبهٔ زمانی، در بله یا تلگرام یادآوری بگیرید."
+        />
+        {reminders === null ? (
+          <p role="alert" className="rounded-xl bg-down-soft px-3 py-2 text-sm text-down">
+            تنظیمات یادآوری بارگذاری نشد. صفحه را دوباره باز کنید.
+          </p>
+        ) : (
+          <ReminderSettingsForm current={reminders} hasChat={reminders.hasChat} />
+        )}
+      </Card>
+
+      <Card id="sleep">
+        <CardHeader
+          title="برنامهٔ خواب"
+          subtitle="ساعت خواب و بیداری هر شب را یک بار تنظیم کنید؛ در برنامهٔ روزانه پیشنهاد می‌شود تا تأییدش کنید."
+        />
+        {sleep === null ? (
+          <p role="alert" className="rounded-xl bg-down-soft px-3 py-2 text-sm text-down">
+            برنامهٔ خواب بارگذاری نشد. صفحه را دوباره باز کنید.
+          </p>
+        ) : (
+          <SleepScheduleForm plans={sleep.plans} />
+        )}
+      </Card>
+
+      <Card>
+        <CardHeader
+          title="پیشنهاد خواب از گوشی"
+          subtitle="وقتی زنگ ساعت گوشی را تنظیم می‌کنید یا می‌خوابید، ساعت‌ها فرستاده شود و برای ثبت از شما پرسیده شود."
+        />
+        <SleepPhoneLink
+          hasLink={sleep?.hasPhoneLink ?? false}
+          available={!!process.env.SUPABASE_SERVICE_ROLE_KEY}
+        />
+      </Card>
+
+      <Card id="share">
+        <CardHeader
+          title="اشتراک‌گذاری پروفایل"
+          subtitle="تمپلیت‌ها، برنامهٔ خواب و کارهای تکراری‌تان را با یک لینک برای کسی بفرستید."
+          aside={
+            <Link href="/import" className="shrink-0 text-sm font-semibold text-accent hover:underline">
+              دریافت از کد ←
+            </Link>
+          }
+        />
+        {shareable === null ? (
+          <p role="alert" className="rounded-xl bg-down-soft px-3 py-2 text-sm text-down">
+            اطلاعات اشتراک‌گذاری بارگذاری نشد. صفحه را دوباره باز کنید.
+          </p>
+        ) : (
+          <ShareProfile pack={shareable} />
+        )}
       </Card>
 
       <Card>

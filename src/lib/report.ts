@@ -7,9 +7,11 @@ import { normalizeTag, normalizeTags } from "./tags";
 // month between 16 and 18", "tagged درس", "mentions کتابخانه") and what they
 // add up to ("how much did I study").
 
+// source: manual, timer or sleep (from the sleep schedule or the phone link)
 export type BlockRow = Pick<
   Tables<"time_blocks">,
-  "id" | "day" | "start_at" | "end_at" | "title" | "description" | "tags" | "amount" | "unit" | "cost" | "done"
+  | "id" | "day" | "start_at" | "end_at" | "title" | "description" | "tags" | "amount" | "unit" | "cost" | "done"
+  | "source" | "remind" | "reminder_minutes"
 >;
 
 export interface ReportFilter {

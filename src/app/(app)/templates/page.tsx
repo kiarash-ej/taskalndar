@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { NewTemplateForm, TemplateCard } from "@/components/template-editor";
-import { Card, CardHeader, PageHeader } from "@/components/ui";
+import { buttonClass, Card, CardHeader, PageHeader } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { loadTemplates, loadUserTags } from "@/lib/data";
 
@@ -35,10 +35,21 @@ export default async function TemplatesPage() {
             <TemplateCard key={template.id} template={template} suggestions={suggestions} />
           ))}
         </div>
-        <Card className="lg:sticky lg:top-32">
-          <CardHeader title="تمپلیت جدید" />
-          <NewTemplateForm />
-        </Card>
+        <div className="space-y-4 lg:sticky lg:top-32">
+          <Card>
+            <CardHeader title="تمپلیت جدید" />
+            <NewTemplateForm />
+          </Card>
+          <Card>
+            <CardHeader
+              title="دریافت از کد"
+              subtitle="تمپلیتی که کسی برایتان فرستاده، یا خط‌هایی از یک برنامهٔ دیگر را وارد کنید."
+            />
+            <Link href="/import" className={`${buttonClass.secondary} w-full`}>
+              وارد کردن کد یا متن
+            </Link>
+          </Card>
+        </div>
       </div>
     </div>
   );

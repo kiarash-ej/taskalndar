@@ -78,27 +78,15 @@ export async function updateTask(
   return {};
 }
 
-// A task that has already been on the checklist for at least one day (today
-// included) may already have a task_completions row, so it is archived
-// rather than deleted — recurring or not — to keep that history. A task
-// whose date hasn't arrived yet has nothing to preserve and is deleted
-// outright.
+// Ends a task from the planner (delete_task, supabase/migrations/*_future_task_cutoffs.sql):
+// one that hasn't started is removed; one that has is archived today, keeping
+// its history; an ended historical version keeps its cutoff. Any replacement
+// still waiting to start goes with it, so no schedule lives on unseen.
 export async function deleteTask(taskId: string): Promise<{ error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "ابتدا وارد حساب خود شوید." };
   const supabase = await createClient();
-  const { data: task } = await supabase
-    .from("tasks")
-    .select("date, archived_at")
-    .eq("id", taskId)
-    .single();
-  if (!task) return { error: GENERIC_ERROR };
-  // Historical schedule versions must keep their original cutoff. Deleting
-  // one again from a past calendar day must not resurrect its later days.
-  if (task.archived_at !== null) return {};
-
-  const keepHistory = task.date <= todayIso();
-  const { error } = keepHistory
-    ? await supabase.from("tasks").update({ archived_at: new Date().toISOString() }).eq("id", taskId)
-    : await supabase.from("tasks").delete().eq("id", taskId);
+  const { error } = await supabase.rpc("delete_task", { p_task_id: taskId });
   if (error) return { error: GENERIC_ERROR };
 
   refresh();

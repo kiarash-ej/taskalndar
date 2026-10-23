@@ -20,6 +20,9 @@ function block(day: string, start: string, end: string, over: Partial<BlockRow> 
     unit: null,
     cost: null,
     done: true,
+    source: "manual",
+    remind: true,
+    reminder_minutes: null,
     ...over,
   };
 }
