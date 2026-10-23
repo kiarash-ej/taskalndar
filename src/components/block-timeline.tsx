@@ -148,7 +148,7 @@ export function BlockTimeline({
               className="absolute inset-x-0 border-t border-dashed border-line"
               style={{ top: (hour - first) * PX_PER_HOUR }}
             >
-              <span className="absolute -top-2.5 start-1 bg-surface-2 px-1 text-[0.7rem] text-muted tabular-nums">
+              <span className="absolute -top-2.5 start-1 bg-surface-solid px-1 text-[0.7rem] text-muted tabular-nums">
                 {faDigits(`${String(hour).padStart(2, "0")}:۰۰`)}
               </span>
             </div>

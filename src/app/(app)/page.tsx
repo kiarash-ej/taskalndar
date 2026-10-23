@@ -1,15 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ApplyDayTemplate } from "@/components/apply-day-template";
 import { DayRing } from "@/components/day-ring";
-import { NextBlock } from "@/components/next-block";
+import { NowNext } from "@/components/now-next";
 import { MonthlyChangeBadge, ScoreSummary } from "@/components/progress-widgets";
 import { TaskChecklist } from "@/components/task-checklist";
 import { WeekBars } from "@/components/week-bars";
-import { Card, CardHeader, PageHeader } from "@/components/ui";
+import { buttonClass, Card, CardHeader, PageHeader } from "@/components/ui";
+import { WeekPlan } from "@/components/week-plan";
 import { requireUser } from "@/lib/auth";
-import { loadProgressData, loadTimeBlocks } from "@/lib/data";
-import { eachDay, jalaliMonthOf, shiftJalaliMonth, todayIso } from "@/lib/dates";
-import { formatDayMonth, formatLongDate, formatPercent, JALALI_MONTH_NAMES } from "@/lib/format";
+import { loadProgressData, loadTemplates, loadTimeBlocks } from "@/lib/data";
+import { eachDay, jalaliMonthOf, shiftJalaliMonth, todayIso, weekdayIndex } from "@/lib/dates";
+import { formatDayMonth, formatLongDate, formatPercent, JALALI_MONTH_NAMES, WEEKDAY_NAMES } from "@/lib/format";
 import {
   compareWithPreviousMonth,
   jalaliWeekRange,
@@ -17,6 +19,7 @@ import {
   scoringWindowStart,
   tasksForDay,
 } from "@/lib/scoring";
+import { templateForWeekday } from "@/lib/week-plan";
 
 export const metadata: Metadata = { title: "داشبورد" };
 
@@ -25,10 +28,14 @@ export default async function DashboardPage() {
   const today = todayIso();
   const week = jalaliWeekRange(today);
 
-  const [data, todayBlocks] = await Promise.all([
+  const [data, weekBlocks, templates] = await Promise.all([
     loadProgressData(user.id, scoringWindowStart(today, 1, 2), today),
-    loadTimeBlocks(user.id, today, today),
+    loadTimeBlocks(user.id, week.start, week.end),
+    loadTemplates(user.id),
   ]);
+  const todayBlocks = weekBlocks.filter((b) => b.day === today);
+  // offered when today is still empty: the template named after this weekday
+  const todayTemplate = templateForWeekday(templates, weekdayIndex(today));
   const weekScore = scorePeriod(data, week.start, week.end, today);
   const { current, previous, change } = compareWithPreviousMonth(data, today);
 
@@ -49,8 +56,37 @@ export default async function DashboardPage() {
     <div>
       <PageHeader title="داشبورد" subtitle={`امروز ${formatLongDate(today)}`} />
 
-      <div className="mb-4 empty:hidden">
-        <NextBlock blocks={todayBlocks} />
+      <div className="mb-4 space-y-4">
+        <Card>
+          <CardHeader
+            title={`امروز، ${WEEKDAY_NAMES[weekdayIndex(today)]}`}
+            aside={
+              <Link href={`/planner?date=${today}`} className="text-sm font-semibold text-accent hover:underline">
+                برنامهٔ کامل امروز ←
+              </Link>
+            }
+          />
+          {todayBlocks.length > 0 ? (
+            <NowNext blocks={todayBlocks} />
+          ) : (
+            <div className="space-y-4 py-2 text-center">
+              <p className="font-semibold">برای امروز هنوز برنامه‌ای نچیده‌اید</p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {todayTemplate && todayTemplate.blocks.length > 0 && (
+                  <ApplyDayTemplate templateId={todayTemplate.id} name={todayTemplate.name} day={today} />
+                )}
+                <Link href={`/planner?date=${today}`} className={buttonClass.secondary}>
+                  + چیدن برنامه
+                </Link>
+              </div>
+            </div>
+          )}
+        </Card>
+
+        <Card>
+          <CardHeader title="این هفته" subtitle={`${formatDayMonth(week.start)} تا ${formatDayMonth(week.end)}`} />
+          <WeekPlan days={eachDay(week.start, week.end)} blocks={weekBlocks} today={today} />
+        </Card>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
