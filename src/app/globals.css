@@ -98,6 +98,29 @@ body {
   color: var(--fg);
 }
 
+/* An app, not a document: plain text keeps the arrow (the browser's default
+   I-beam over text reads as "you can type here"), only fields show the text
+   cursor, and everything clickable the hand. Text can still be selected. */
+@layer base {
+  body {
+    cursor: default;
+  }
+  input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="button"], [type="submit"], [type="reset"]),
+  textarea,
+  [contenteditable]:not([contenteditable="false"]) {
+    cursor: text;
+  }
+  a[href],
+  button:not(:disabled),
+  select,
+  summary,
+  label:has(input[type="checkbox"], input[type="radio"]),
+  [role="button"]:not([aria-disabled="true"]),
+  input:is([type="checkbox"], [type="radio"], [type="color"], [type="button"], [type="submit"], [type="reset"]):not(:disabled) {
+    cursor: pointer;
+  }
+}
+
 /* ---- Special skins (src/lib/skins.ts): accents for light and dark, and the scene layer ---- */
 :root {
   /* stars and sparkles in skin scenes: dark ink by day, warm light at night */

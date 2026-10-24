@@ -1,9 +1,12 @@
 import { clockOf, formatClock } from "./blocks";
+import type { IsoDate } from "./dates";
 import { faDigits, WEEKDAY_NAMES } from "./format";
 import type { BlockRow } from "./report";
+import { tasksForDay, type CompletionRow, type TaskRow } from "./scoring";
 
 // The home page: what is on now and next today, and one short line per day
-// of the week, read from the time blocks the user has arranged.
+// of the week, read from the time blocks the user has arranged and the tasks
+// expected on that day.
 
 type PlanBlock = Pick<BlockRow, "day" | "start_at" | "end_at" | "title" | "tags" | "done" | "source">;
 
@@ -62,6 +65,17 @@ export function daySummary(blocks: PlanBlock[]): { items: string[]; more: number
         : `${title} ${formatDuration(g.minutes)}`,
     );
   return { items: items.slice(0, MAX_SUMMARY_ITEMS), more: Math.max(0, items.length - MAX_SUMMARY_ITEMS) };
+}
+
+// The tasks expected on `day` (a recurring one on its weekdays, a one-time one
+// on its date), in the order they were made, each marked if ticked off.
+export function dayTasks(
+  tasks: TaskRow[],
+  completions: CompletionRow[],
+  day: IsoDate,
+): { id: string; title: string; done: boolean }[] {
+  const done = new Set(completions.filter((c) => c.done && c.date === day).map((c) => c.task_id));
+  return tasksForDay(tasks, day).map((t) => ({ id: t.id, title: t.title, done: done.has(t.id) }));
 }
 
 const words = (text: string) => text.replace(/\u200c/g, "").split(/[\s،,.\-–_()]+/).filter(Boolean);

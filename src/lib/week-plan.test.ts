@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { BlockRow } from "./report";
-import { daySummary, formatDuration, nowAndNext, templateForWeekday } from "./week-plan";
+import type { TaskRow } from "./scoring";
+import { dayTasks, daySummary, formatDuration, nowAndNext, templateForWeekday } from "./week-plan";
 
 let next = 0;
 // 2026-10-22 is a Thursday; Tehran is UTC+03:30.
@@ -138,5 +139,39 @@ describe("templateForWeekday", () => {
 
   it("finds nothing when no template names the day", () => {
     expect(templateForWeekday(templates, 6)).toBeNull();
+  });
+});
+
+describe("dayTasks", () => {
+  const task = (over: Partial<TaskRow>): TaskRow => ({
+    id: "t",
+    title: "Gym",
+    is_recurring: true,
+    date: "2026-10-24",
+    weekdays: [0, 2, 4],
+    archived_at: null,
+    ...over,
+  });
+  const tasks = [
+    task({ id: "gym" }),
+    task({ id: "buy", title: "خرید", is_recurring: false, date: "2026-10-27", weekdays: null }),
+  ];
+
+  it("lists a recurring task on each of its weekdays and a one-time task on its date", () => {
+    // 2026-10-24 is a Saturday
+    const week = ["2026-10-24", "2026-10-25", "2026-10-26", "2026-10-27", "2026-10-28"].map((day) =>
+      dayTasks(tasks, [], day).map((t) => t.title),
+    );
+    expect(week).toEqual([["Gym"], [], ["Gym"], ["خرید"], ["Gym"]]);
+  });
+
+  it("marks what was ticked off that day only", () => {
+    const completions = [{ task_id: "gym", date: "2026-10-24", done: true }];
+    expect(dayTasks(tasks, completions, "2026-10-24")).toEqual([{ id: "gym", title: "Gym", done: true }]);
+    expect(dayTasks(tasks, completions, "2026-10-26")[0].done).toBe(false);
+  });
+
+  it("leaves out days before a recurring task was made", () => {
+    expect(dayTasks(tasks, [], "2026-10-19")).toEqual([]);
   });
 });

@@ -85,7 +85,13 @@ export default async function DashboardPage() {
 
         <Card>
           <CardHeader title="این هفته" subtitle={`${formatDayMonth(week.start)} تا ${formatDayMonth(week.end)}`} />
-          <WeekPlan days={eachDay(week.start, week.end)} blocks={weekBlocks} today={today} />
+          <WeekPlan
+            days={eachDay(week.start, week.end)}
+            blocks={weekBlocks}
+            tasks={data.tasks}
+            completions={data.completions}
+            today={today}
+          />
         </Card>
       </div>
 
