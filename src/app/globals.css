@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #f6f5f1;
-  --surface: #ffffff;
-  --surface-2: #f0eee8;
-  --line: #e4e1d9;
+  --bg-base: #f6f5f1;
+  --surface-base: #ffffff;
+  --surface-2-base: #f0eee8;
+  --line-base: #e4e1d9;
   --fg: #1d1c19;
   --muted: #6d6a62;
   --accent: #0f766e;
@@ -27,10 +27,10 @@
    device's preference while the user hasn't picked light or dark. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #141412;
-    --surface: #1d1d1a;
-    --surface-2: #26261f;
-    --line: #33322c;
+    --bg-base: #141412;
+    --surface-base: #1d1d1a;
+    --surface-2-base: #26261f;
+    --line-base: #33322c;
     --fg: #ecebe6;
     --muted: #a3a097;
     --accent: #2dd4bf;
@@ -45,10 +45,10 @@
 }
 
 :root[data-theme="dark"] {
-  --bg: #141412;
-  --surface: #1d1d1a;
-  --surface-2: #26261f;
-  --line: #33322c;
+  --bg-base: #141412;
+  --surface-base: #1d1d1a;
+  --surface-2-base: #26261f;
+  --line-base: #33322c;
   --fg: #ecebe6;
   --muted: #a3a097;
   --accent: #2dd4bf;
@@ -61,9 +61,24 @@
   color-scheme: dark;
 }
 
+
+/* Glass: cards and inputs let the custom background or a skin's scene show
+   through, and every surface, border and chart line takes a tint of the
+   theme's accent, so the whole app follows the chosen look. The -base values
+   above are the untinted light/dark colours; popovers that sit over other
+   content use the opaque --surface-solid. */
+:root {
+  --bg: color-mix(in srgb, var(--accent) 5%, var(--bg-base));
+  --surface-solid: color-mix(in srgb, var(--accent) 6%, var(--surface-base));
+  --surface: color-mix(in srgb, var(--surface-solid) 68%, transparent);
+  --surface-2: color-mix(in srgb, color-mix(in srgb, var(--accent) 12%, var(--surface-2-base)) 70%, transparent);
+  --line: color-mix(in srgb, color-mix(in srgb, var(--accent) 20%, var(--line-base)) 85%, transparent);
+}
+
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
+  --color-surface-solid: var(--surface-solid);
   --color-surface-2: var(--surface-2);
   --color-line: var(--line);
   --color-fg: var(--fg);

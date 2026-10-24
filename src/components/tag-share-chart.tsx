@@ -17,7 +17,7 @@ function ShareTooltip({ active, payload }: { active?: boolean; payload?: { paylo
   const row = payload?.[0]?.payload;
   if (!active || !row) return null;
   return (
-    <div dir="rtl" className="rounded-xl border border-line bg-surface px-3 py-2 text-sm shadow-sm">
+    <div dir="rtl" className="rounded-xl border border-line bg-surface-solid px-3 py-2 text-sm shadow-sm">
       <p className="font-bold">{tagLabel(row.tag)}</p>
       <p className="text-muted">
         {formatDuration(row.minutes)} · {formatPercent(row.percent)} از زمان کل

@@ -138,7 +138,7 @@ export function SkinSettings({ initialActive, initialCustoms }: { initialActive:
                   </span>
                 </span>
               </button>
-              <span className="absolute end-1 top-1 flex rounded-lg bg-surface/90">
+              <span className="absolute end-1 top-1 flex rounded-lg bg-surface-solid/90">
                 <button type="button" onClick={() => setEditing(theme)} className={iconButtonClass} aria-label={`ویرایش «${theme.name}»`}>
                   <Pencil />
                 </button>
@@ -308,7 +308,7 @@ function ThemeEditor({
           }
         >
           {theme.scene !== "none" && <SceneLayer key={`${theme.scene}-${theme.intensity}`} scene={theme.scene} level={theme.intensity} contained />}
-          <div className="absolute inset-x-3 top-3 space-y-2 rounded-xl border border-line bg-surface p-3 shadow-sm">
+          <div className="absolute inset-x-3 top-3 space-y-2 rounded-xl border border-line bg-surface-solid p-3 shadow-sm">
             <p className="text-sm font-bold">{name || "پیش‌نمایش"}</p>
             <ProgressBar value={68} label="نمونهٔ پیشرفت" />
             <div className="flex items-center justify-between gap-2">

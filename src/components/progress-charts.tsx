@@ -36,7 +36,7 @@ function ChartTooltip({
   const point = payload?.[0]?.payload;
   if (!active || !point) return null;
   return (
-    <div dir="rtl" className="rounded-xl border border-line bg-surface px-3 py-2 text-sm shadow-sm">
+    <div dir="rtl" className="rounded-xl border border-line bg-surface-solid px-3 py-2 text-sm shadow-sm">
       <p className="text-muted">{point.detail}</p>
       <p className="font-bold">{point.score === null ? "بدون داده" : formatPercent(point.score)}</p>
     </div>

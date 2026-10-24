@@ -1,7 +1,7 @@
 import { backgroundStyle, type Background } from "@/lib/background";
 
-// Fixed full-page layer behind the app, with a scrim over it so text outside
-// the (opaque) cards stays readable whatever colour or picture was chosen.
+// Fixed full-page layer behind the app, with a scrim over it so text, on the
+// see-through cards too, stays readable whatever colour or picture was chosen.
 export function AppBackground({ background, imageUrl }: { background: Background; imageUrl: string | null }) {
   const style = backgroundStyle(background, imageUrl);
   if (!style) return null;

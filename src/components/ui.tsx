@@ -8,7 +8,7 @@ export function cx(...classes: (string | false | null | undefined)[]): string {
 export function Card({ className, ...props }: ComponentProps<"section">) {
   return (
     <section
-      className={cx("rounded-2xl border border-line bg-surface p-4 sm:p-5", className)}
+      className={cx("rounded-2xl border border-line bg-surface p-4 backdrop-blur-md sm:p-5", className)}
       {...props}
     />
   );
